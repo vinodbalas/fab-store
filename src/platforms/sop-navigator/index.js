@@ -1,5 +1,5 @@
 /**
- * SOP Navigator Platform
+ * SOP Executor Platform
  * 
  * Reusable platform for building SOP-native solutions across industries
  * Provides AI reasoning, SOP matching, and compliance guardrails

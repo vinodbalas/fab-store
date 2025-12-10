@@ -1,7 +1,7 @@
 /**
  * Cogniclaim Platform Adapter
  *
- * Connects Cogniclaim (solution) to SOP Navigator (platform)
+ * Connects Cogniclaim (solution) to SOP Executor (platform)
  * Provides Cogniclaim-specific SOP data to the platform
  */
 

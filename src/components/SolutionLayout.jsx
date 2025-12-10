@@ -5,10 +5,10 @@ import { useDemoMode } from "../contexts/DemoModeContext";
 import Sidebar from "./Sidebar";
 
 const TP_LOGO = "/tp-logo.svg";
-const AVATAR_DEFAULT = "/vk.jpeg";
+const AVATAR_DEFAULT = "/vkv.jpeg";
 
 /**
- * Generic solution layout for SOP Navigator–based applications.
+ * Generic solution layout for SOP Executor–based applications.
  *
  * Shared shell (header, user menu, sidebar, footer) with configurable:
  * - productName: e.g. "Cogniclaim", "TP Resolve"
@@ -24,7 +24,8 @@ export default function SolutionLayout({
   tagline,
   navItems,
   storageKey = "app",
-  footerText = "Powered by Teleperformance • SOP Navigator",
+  footerText = "Powered by Teleperformance • SOP Executor",
+  showSettings = true,
 }) {
   const { user, logout } = usePageAuth();
   const { isDemoMode } = useDemoMode();
@@ -123,7 +124,12 @@ export default function SolutionLayout({
       </header>
 
       <div className="flex flex-1 pt-[68px] overflow-hidden">
-        <Sidebar onNavigate={onNavigate} active={active} navItems={navItems} />
+        <Sidebar
+          onNavigate={onNavigate}
+          active={active}
+          navItems={navItems}
+          showSettings={showSettings}
+        />
 
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950 min-h-0">

@@ -1,10 +1,14 @@
 import { useMemo, useState, useEffect } from "react";
-import { Sparkles, Search, ArrowRight, ChevronDown, User, LogOut, ArrowLeft } from "lucide-react";
+import { Sparkles, Search, ArrowRight, ChevronDown, User, LogOut, ArrowLeft, Layers, Copy } from "lucide-react";
 import { fabApps } from "../data/fabApps";
 import { fabModels } from "../data/fabModels";
-import { fabPlatforms } from "../data/fabPlatforms";
+import { fabPlatforms, getEnrichedPlatforms } from "../data/fabPlatforms";
+import { applicationTemplates, getTemplatesByIndustry } from "../data/templates";
 import StoreFooter from "./StoreFooter";
 import PlatformDetail from "./PlatformDetail";
+import TemplateCloner from "./TemplateCloner";
+import MySpace from "./MySpace";
+import AppBuilder from "./AppBuilder";
 import { useAuth } from "../auth/AuthContext";
 
 const sortOptions = [
@@ -16,96 +20,124 @@ const statusPriority = { Live: 0, Preview: 1, Beta: 2, "Coming Soon": 3 };
 
 function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("All");
   const [industry, setIndustry] = useState("All");
   const [sort, setSort] = useState("status");
   const [showDemoForm, setShowDemoForm] = useState(false);
   const [activeNav, setActiveNav] = useState("store");
   const [modalCategory, setModalCategory] = useState("All");
-  const [modalMaturity, setModalMaturity] = useState("All");
+  const [modalModality, setModalModality] = useState("All");
   const [selectedPlatform, setSelectedPlatform] = useState(null);
   const [platformCategory, setPlatformCategory] = useState("All");
   const [platformIndustry, setPlatformIndustry] = useState("All");
-
-  const categories = useMemo(() => {
-    const unique = Array.from(new Set(fabApps.map((app) => app.category)));
-    return ["All", ...unique];
-  }, []);
+  const [templateIndustry, setTemplateIndustry] = useState("All");
+  const [cloningTemplate, setCloningTemplate] = useState(null);
+  const [clonedTemplates, setClonedTemplates] = useState(() => {
+    // Load cloned templates from localStorage
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("fabStore.clonedTemplates");
+      return stored ? JSON.parse(stored) : [];
+    }
+    return [];
+  });
+  const [showBuilder, setShowBuilder] = useState(false);
+  const [editingApp, setEditingApp] = useState(null);
 
   const industries = useMemo(() => {
-    const unique = Array.from(new Set(fabApps.map((app) => app.industry)));
-    return ["All", ...unique];
+    // Curated list of key industries, enriched from actual apps and templates
+    const base = new Set([
+      "Healthcare",
+      "Financial Services",
+      "Contact Center",
+      "Banking",
+      "Travel",
+      "Manufacturing",
+      "Retail",
+    ]);
+    fabApps.forEach((app) => {
+      if (app.industry) base.add(app.industry);
+    });
+    applicationTemplates.forEach((template) => {
+      if (template.industry) base.add(template.industry);
+    });
+    return ["All", ...Array.from(base)];
   }, []);
+
+  const filteredTemplates = useMemo(() => {
+    const query = search.toLowerCase();
+    const templates = getTemplatesByIndustry(templateIndustry);
+    return templates.filter((template) => {
+      const matchesQuery =
+        !query ||
+        template.name.toLowerCase().includes(query) ||
+        template.description.toLowerCase().includes(query) ||
+        template.tags?.some((tag) => tag.toLowerCase().includes(query));
+      return matchesQuery;
+    });
+  }, [templateIndustry, search]);
 
   const modalCategories = useMemo(() => {
     const unique = Array.from(new Set(fabModels.map((model) => model.category)));
     return ["All", ...unique];
   }, []);
 
-  const modalMaturities = useMemo(() => {
-    const unique = Array.from(new Set(fabModels.map((model) => model.maturity)));
-    return ["All", ...unique];
-  }, []);
-
-  const platformCategories = useMemo(() => {
-    const unique = Array.from(new Set(fabPlatforms.map((platform) => platform.category)));
+  const modalModalities = useMemo(() => {
+    const unique = Array.from(new Set(fabModels.map((model) => model.modality)));
     return ["All", ...unique];
   }, []);
 
   const platformIndustries = useMemo(() => {
-    const unique = Array.from(new Set(fabPlatforms.map((platform) => platform.industry)));
-    return ["All", ...unique];
+    const base = new Set([
+      "Healthcare",
+      "Financial Services",
+      "Contact Center",
+      "Banking",
+      "Travel",
+    ]);
+    fabPlatforms.forEach((platform) => {
+      if (platform.industry) base.add(platform.industry);
+    });
+    return ["All", ...Array.from(base)];
   }, []);
 
   const filteredPlatforms = useMemo(() => {
     const query = search.toLowerCase();
-    const base = fabPlatforms.filter((platform) => {
-      const matchesCategory = platformCategory === "All" || platform.category === platformCategory;
+    const enrichedPlatforms = getEnrichedPlatforms();
+    const base = enrichedPlatforms.filter((platform) => {
       const matchesIndustry = platformIndustry === "All" || platform.industry === platformIndustry;
       const matchesQuery =
         !query ||
         platform.name.toLowerCase().includes(query) ||
         platform.description.toLowerCase().includes(query) ||
         platform.tags?.some((tag) => tag.toLowerCase().includes(query));
-      return matchesCategory && matchesIndustry && matchesQuery;
+      return matchesIndustry && matchesQuery;
     });
     return base.sort((a, b) => {
       const pa = statusPriority[a.status] ?? 99;
       const pb = statusPriority[b.status] ?? 99;
       if (pa !== pb) return pa - pb;
+      // Sort by solution count (descending) as secondary sort
+      const aCount = a.metrics?.solutionCount || 0;
+      const bCount = b.metrics?.solutionCount || 0;
+      if (aCount !== bCount) return bCount - aCount;
       return a.name.localeCompare(b.name);
     });
   }, [platformCategory, platformIndustry, search]);
 
-  const spotlightApps = fabApps.slice(0, 2);
-  const heroSlides = fabApps.slice(0, 4).map((app, idx) => ({
-    ...app,
-    previewPanels: [
-      {
-        title: `${app.name} Command`,
-        description: "Ops cockpit · KPI streak · SLA health",
-        pill: "Live control",
-      },
-      {
-        title: "AI Telemetry",
-        description: "Reasoning traces · Confidence bands",
-        pill: idx % 2 === 0 ? "FAB Core" : "Roadmap",
-      },
-    ],
-  }));
-  const pipelineApps = fabApps.filter((app) => app.status !== "Live");
+  // Combine original apps with cloned templates
+  const allApps = useMemo(() => {
+    return [...fabApps, ...clonedTemplates];
+  }, [clonedTemplates]);
 
   const filteredApps = useMemo(() => {
     const query = search.toLowerCase();
-    const base = fabApps.filter((app) => {
-      const matchesCategory = category === "All" || app.category === category;
+    const base = allApps.filter((app) => {
       const matchesIndustry = industry === "All" || app.industry === industry;
       const matchesQuery =
         !query ||
         app.name.toLowerCase().includes(query) ||
         app.description.toLowerCase().includes(query) ||
         app.tags?.some((tag) => tag.toLowerCase().includes(query));
-      return matchesCategory && matchesIndustry && matchesQuery;
+      return matchesIndustry && matchesQuery;
     });
     return base.sort((a, b) => {
       if (sort === "name") return a.name.localeCompare(b.name);
@@ -114,15 +146,15 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
       if (pa !== pb) return pa - pb;
       return a.name.localeCompare(b.name);
     });
-  }, [category, industry, search, sort]);
+  }, [industry, search, sort, allApps]);
 
   const filteredModals = useMemo(() => {
     return fabModels.filter((model) => {
       const matchesCategory = modalCategory === "All" || model.category === modalCategory;
-      const matchesMaturity = modalMaturity === "All" || model.maturity === modalMaturity;
-      return matchesCategory && matchesMaturity;
+      const matchesModality = modalModality === "All" || model.modality === modalModality;
+      return matchesCategory && matchesModality;
     });
-  }, [modalCategory, modalMaturity]);
+  }, [modalCategory, modalModality]);
 
   const handleSectionNavigate = (target) => {
     setActiveNav(target);
@@ -138,6 +170,33 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
   const handlePlatformBack = () => {
     setSelectedPlatform(null);
   };
+
+  const handleCloneTemplate = (template) => {
+    const newClonedTemplates = [...clonedTemplates, template];
+    setClonedTemplates(newClonedTemplates);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("fabStore.clonedTemplates", JSON.stringify(newClonedTemplates));
+    }
+    setCloningTemplate(null);
+  };
+
+  const spotlightApps = allApps.slice(0, 2);
+  const heroSlides = allApps.slice(0, 4).map((app, idx) => ({
+    ...app,
+    previewPanels: [
+      {
+        title: `${app.name} Command`,
+        description: "Ops cockpit · KPI streak · SLA health",
+        pill: "Live control",
+      },
+      {
+        title: "AI Telemetry",
+        description: "Reasoning traces · Confidence bands",
+        pill: idx % 2 === 0 ? "FAB Core" : "Roadmap",
+      },
+    ],
+  }));
+  const pipelineApps = allApps.filter((app) => app.status !== "Live");
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#F7F8FF]">
@@ -156,12 +215,41 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
           {activeNav === "store" && (
             <>
               <HeroCarousel slides={heroSlides} readOnly={readOnly} onRequestLogin={onRequestLogin} onLaunch={onLaunch} />
+              
+              {/* Platforms Section */}
               <section className="px-4 md:px-10">
                 <div className="rounded-[32px] bg-white/95 border border-white/40 shadow-[0_45px_85px_rgba(15,10,45,0.15)] p-6 md:p-10 space-y-6 backdrop-blur">
                   <div className="flex flex-col gap-3">
-                    <div className="text-xs font-semibold uppercase tracking-[0.35em] text-[#5C36C8]">Full catalog</div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-semibold uppercase tracking-[0.35em] text-[#5C36C8]">Platforms</div>
+                        <p className="text-sm text-gray-600 mt-1">Reusable AI platforms that power multiple solutions</p>
+                      </div>
+                      <button
+                        onClick={() => handleSectionNavigate("platforms")}
+                        className="text-sm font-semibold text-[#612D91] hover:text-[#7B3DA1] transition-colors flex items-center gap-1"
+                      >
+                        View all platforms
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                    {getEnrichedPlatforms().slice(0, 3).map((platform) => (
+                      <PlatformCard key={platform.id} platform={platform} onSelect={handlePlatformSelect} />
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              {/* Solutions Section */}
+              <section className="px-4 md:px-10">
+                <div className="rounded-[32px] bg-white/95 border border-white/40 shadow-[0_45px_85px_rgba(15,10,45,0.15)] p-6 md:p-10 space-y-6 backdrop-blur">
+                  <div className="flex flex-col gap-3">
+                    <div className="text-xs font-semibold uppercase tracking-[0.35em] text-[#5C36C8]">Solutions</div>
+                    <p className="text-sm text-gray-600">Applications built on our platforms</p>
                     <div className="flex flex-wrap gap-2">
-                      <FilterPill label="Category" activeValue={category} options={categories} onSelect={setCategory} />
                       <FilterPill label="Industry" activeValue={industry} options={industries} onSelect={setIndustry} />
                       <SortSelect value={sort} onChange={setSort} />
                     </div>
@@ -169,7 +257,15 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
                     {filteredApps.map((app) => (
-                      <AppCard key={app.id} app={app} onLaunch={onLaunch} readOnly={readOnly} onRequestLogin={onRequestLogin} />
+                      <AppCard 
+                        key={app.id} 
+                        app={app} 
+                        onLaunch={onLaunch} 
+                        readOnly={readOnly} 
+                        onRequestLogin={onRequestLogin}
+                        onPlatformClick={handlePlatformSelect}
+                        onCloneTemplate={() => setCloningTemplate(app)}
+                      />
                     ))}
                     {filteredApps.length === 0 && (
                       <div className="col-span-full text-center py-12 text-gray-500 dark:text-gray-400">
@@ -197,12 +293,102 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
               readOnly={readOnly}
               onRequestLogin={onRequestLogin}
               categoryOptions={modalCategories}
-              maturityOptions={modalMaturities}
+              modalityOptions={modalModalities}
               activeCategory={modalCategory}
-              activeMaturity={modalMaturity}
+              activeModality={modalModality}
               onCategoryChange={setModalCategory}
-              onMaturityChange={setModalMaturity}
+              onModalityChange={setModalModality}
             />
+          )}
+
+          {activeNav === "templates" && (
+            <section className="px-4 md:px-10">
+              <div className="rounded-[32px] bg-white/95 border border-white/40 shadow-[0_45px_85px_rgba(15,10,45,0.15)] p-6 md:p-10 space-y-6 backdrop-blur">
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.35em] text-[#5C36C8]">Template Marketplace</div>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Clone and customize pre-built templates to create your own solutions
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <FilterPill label="Industry" activeValue={templateIndustry} options={industries} onSelect={setTemplateIndustry} />
+                    <SortSelect value={sort} onChange={setSort} />
+                  </div>
+                </div>
+
+                {/* Pre-built Templates */}
+                {filteredTemplates.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Pre-built Templates</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Industry-specific templates ready to clone and customize
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                      {filteredTemplates.map((template) => (
+                        <AppCard 
+                          key={template.id} 
+                          app={template} 
+                          onLaunch={onLaunch} 
+                          readOnly={readOnly} 
+                          onRequestLogin={onRequestLogin}
+                          onPlatformClick={handlePlatformSelect}
+                          onCloneTemplate={() => setCloningTemplate(template)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Original Live Apps as Templates */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Live Solutions (Available as Templates)</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Clone existing live solutions to create your own customized versions
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                    {fabApps.filter((app) => app.status === "Live").map((app) => (
+                      <AppCard 
+                        key={app.id} 
+                        app={app} 
+                        onLaunch={onLaunch} 
+                        readOnly={readOnly} 
+                        onRequestLogin={onRequestLogin}
+                        onPlatformClick={handlePlatformSelect}
+                        onCloneTemplate={() => setCloningTemplate(app)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Cloned Templates */}
+                {clonedTemplates.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Cloned Templates</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                      {clonedTemplates.map((app) => (
+                        <AppCard 
+                          key={app.id} 
+                          app={app} 
+                          onLaunch={onLaunch} 
+                          readOnly={readOnly} 
+                          onRequestLogin={onRequestLogin}
+                          onPlatformClick={handlePlatformSelect}
+                          onCloneTemplate={() => setCloningTemplate(app)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {clonedTemplates.length === 0 && (
+                  <div className="text-center py-12 text-gray-500">
+                    <Copy className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                    <p className="text-sm">No cloned templates yet. Clone a template to get started!</p>
+                  </div>
+                )}
+              </div>
+            </section>
           )}
 
           {activeNav === "platforms" && !selectedPlatform && (
@@ -211,7 +397,6 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
                 <div className="flex flex-col gap-3">
                   <div className="text-xs font-semibold uppercase tracking-[0.35em] text-[#5C36C8]">Platform Catalog</div>
                   <div className="flex flex-wrap gap-2">
-                    <FilterPill label="Category" activeValue={platformCategory} options={platformCategories} onSelect={setPlatformCategory} />
                     <FilterPill label="Industry" activeValue={platformIndustry} options={platformIndustries} onSelect={setPlatformIndustry} />
                   </div>
                 </div>
@@ -234,6 +419,54 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
             <PlatformDetail platform={selectedPlatform} onBack={handlePlatformBack} onLaunch={onLaunch} readOnly={readOnly} onRequestLogin={onRequestLogin} />
           )}
 
+          {activeNav === "myspace" && (
+            <MySpace
+              onLaunchBuilder={() => {
+                setShowBuilder(true);
+                setEditingApp(null);
+              }}
+              onEditApp={(app) => {
+                setEditingApp(app);
+                setShowBuilder(true);
+              }}
+              onViewApp={(app) => {
+                if (app.launchKey) {
+                  onLaunch?.(app.launchKey);
+                }
+              }}
+            />
+          )}
+
+          {showBuilder && (
+            <AppBuilder
+              app={editingApp}
+              onClose={() => {
+                setShowBuilder(false);
+                setEditingApp(null);
+              }}
+              onSave={(appData) => {
+                const userApps = JSON.parse(localStorage.getItem("fabStore.userApps") || "[]");
+                const existingIndex = userApps.findIndex((a) => a.id === appData.id);
+                const appToSave = {
+                  ...appData,
+                  lastModified: new Date().toISOString(),
+                  status: appData.status || "Workspace",
+                };
+                if (existingIndex >= 0) {
+                  userApps[existingIndex] = appToSave;
+                } else {
+                  userApps.push(appToSave);
+                }
+                localStorage.setItem("fabStore.userApps", JSON.stringify(userApps));
+                setShowBuilder(false);
+                setEditingApp(null);
+                if (activeNav !== "myspace") {
+                  handleSectionNavigate("myspace");
+                }
+              }}
+            />
+          )}
+
           {activeNav === "about" && (
             <section className="px-4 md:px-10">
               <div className="rounded-[32px] bg-white/95 border border-white/40 shadow-[0_35px_85px_rgba(15,10,45,0.12)] p-8 space-y-4 backdrop-blur text-gray-700">
@@ -251,6 +484,13 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
       </div>
       <StoreFooter onNavigate={onNavigate} />
       <DemoRequestModal open={showDemoForm} onClose={() => setShowDemoForm(false)} />
+      {cloningTemplate && (
+        <TemplateCloner
+          template={cloningTemplate}
+          onClose={() => setCloningTemplate(null)}
+          onClone={handleCloneTemplate}
+        />
+      )}
     </div>
   </div>
   );
@@ -264,8 +504,10 @@ function TopNav({ search, onSearchChange, readOnly, onRequestLogin, onRequestDem
 
   const navItems = [
     { label: "Store", key: "store" },
+    { label: "Templates", key: "templates" },
     { label: "Modals", key: "modals" },
     { label: "Platforms", key: "platforms" },
+    { label: "My Space", key: "myspace" },
     { label: "About", key: "about" },
   ];
   return (
@@ -630,19 +872,19 @@ function ModelGallery({
   readOnly,
   onRequestLogin,
   categoryOptions,
-  maturityOptions,
+  modalityOptions,
   activeCategory,
-  activeMaturity,
+  activeModality,
   onCategoryChange,
-  onMaturityChange,
+  onModalityChange,
 }) {
   const productionTotal = totalModels?.filter((m) => m.maturity === "Production").length ?? 0;
   return (
     <section id="fab-modals" className="px-4 md:px-10">
       <div className="rounded-[32px] bg-white/95 border border-white/40 shadow-[0_35px_85px_rgba(14,10,60,0.15)] p-6 md:p-10 space-y-8 backdrop-blur">
         <div className="flex flex-wrap gap-2">
+          <FilterPill label="Modality" activeValue={activeModality} options={modalityOptions} onSelect={onModalityChange} />
           <FilterPill label="Category" activeValue={activeCategory} options={categoryOptions} onSelect={onCategoryChange} />
-          <FilterPill label="Maturity" activeValue={activeMaturity} options={maturityOptions} onSelect={onMaturityChange} />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
           {models.length > 0 ? (
@@ -663,7 +905,7 @@ function ModelCard({ model, readOnly, onRequestLogin }) {
     <article className="rounded-[24px] border border-gray-200/70 bg-white shadow-[0_20px_45px_rgba(15,10,55,0.12)] p-5 flex flex-col gap-4">
       <div className="flex items-center justify-between text-xs uppercase tracking-[0.35em] text-gray-500">
         <span>{model.category}</span>
-        <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">{model.maturity}</span>
+        <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">{model.modality}</span>
       </div>
       <div className="space-y-1">
         <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.35em] text-[#6F54E8] font-semibold">
@@ -791,6 +1033,8 @@ function MiniAppTile({ app, readOnly, onRequestLogin, onLaunch }) {
 }
 
 function PlatformCard({ platform, onSelect }) {
+  const metrics = platform.metrics || { solutionCount: 0, industries: [], liveSolutions: 0 };
+  
   return (
     <div 
       onClick={() => onSelect?.(platform)}
@@ -798,9 +1042,16 @@ function PlatformCard({ platform, onSelect }) {
     >
       <div className={`h-1.5 w-full bg-gradient-to-r ${platform.accent}`} />
       <div className="p-6 flex flex-col gap-4">
-        <div className="flex items-center flex-wrap gap-2 text-xs uppercase tracking-wide text-gray-500">
-          <span className={platform.categoryColor}>{platform.category}</span>
-          <span className={`px-2 py-0.5 rounded-full ${platform.statusColor || "bg-gray-100 text-gray-700"}`}>{platform.status}</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center flex-wrap gap-2 text-xs uppercase tracking-wide text-gray-500">
+            <span className={platform.categoryColor}>{platform.category}</span>
+            <span className={`px-2 py-0.5 rounded-full ${platform.statusColor || "bg-gray-100 text-gray-700"}`}>{platform.status}</span>
+          </div>
+          {metrics.solutionCount > 0 && (
+            <div className="px-2.5 py-1 rounded-full bg-[#612D91]/10 text-[#612D91] text-[10px] font-semibold">
+              {metrics.solutionCount} {metrics.solutionCount === 1 ? 'Solution' : 'Solutions'}
+            </div>
+          )}
         </div>
         <div>
           <h3 className="text-xl font-semibold text-gray-900">{platform.name}</h3>
@@ -810,18 +1061,39 @@ function PlatformCard({ platform, onSelect }) {
 
         <div className="flex flex-wrap gap-3 text-[11px] text-gray-600">
           <div className="rounded-2xl border border-gray-200/80 px-3 py-1.5">
-            <p className="uppercase tracking-wide text-gray-500 font-semibold">Industry</p>
-            <p className="font-semibold text-gray-900">{platform.industry}</p>
+            <p className="uppercase tracking-wide text-gray-500 font-semibold">Solutions Built</p>
+            <p className="font-semibold text-gray-900">{metrics.solutionCount || 0}</p>
           </div>
           <div className="rounded-2xl border border-gray-200/80 px-3 py-1.5">
-            <p className="uppercase tracking-wide text-gray-500 font-semibold">Solutions</p>
-            <p className="font-semibold text-gray-900">{platform.solutions?.length || 0} built</p>
+            <p className="uppercase tracking-wide text-gray-500 font-semibold">Industries</p>
+            <p className="font-semibold text-gray-900">
+              {metrics.industriesCount > 0 
+                ? `${metrics.industriesCount} ${metrics.industriesCount === 1 ? 'Industry' : 'Industries'}`
+                : platform.industry}
+            </p>
           </div>
-          <div className="rounded-2xl border border-gray-200/80 px-3 py-1.5">
-            <p className="uppercase tracking-wide text-gray-500 font-semibold">Stack</p>
-            <p className="font-semibold text-gray-900">{platform.stack?.join(" · ") || "Platform"}</p>
-          </div>
+          {metrics.liveSolutions > 0 && (
+            <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/50 px-3 py-1.5">
+              <p className="uppercase tracking-wide text-emerald-600 font-semibold">Live</p>
+              <p className="font-semibold text-emerald-700">{metrics.liveSolutions}</p>
+            </div>
+          )}
         </div>
+
+        {metrics.industries && metrics.industries.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {metrics.industries.slice(0, 3).map((industry, idx) => (
+              <span key={idx} className="px-2 py-1 rounded-full bg-[#612D91]/10 text-[#612D91] text-[10px] font-medium">
+                {industry}
+              </span>
+            ))}
+            {metrics.industries.length > 3 && (
+              <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-600 text-[10px] font-medium">
+                +{metrics.industries.length - 3} more
+              </span>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-gray-600">
           {platform.highlights?.slice(0, 3).map((highlight, idx) => (
@@ -846,14 +1118,31 @@ function PlatformCard({ platform, onSelect }) {
   );
 }
 
-function AppCard({ app, onLaunch, readOnly, onRequestLogin }) {
+function AppCard({ app, onLaunch, readOnly, onRequestLogin, onPlatformClick, onCloneTemplate }) {
+  const platform = app.platformId ? fabPlatforms.find((p) => p.id === app.platformId) : null;
+  
   return (
     <div className="rounded-[28px] border border-white/40 bg-white/95 shadow-[0_20px_50px_rgba(18,12,64,0.15)] flex flex-col overflow-hidden">
       <div className={`h-1.5 w-full bg-gradient-to-r ${app.accent}`} />
       <div className="p-6 flex flex-col gap-4">
-        <div className="flex items-center flex-wrap gap-2 text-xs uppercase tracking-wide text-gray-500">
-          <span className={app.categoryColor}>{app.category}</span>
-          <span className={`px-2 py-0.5 rounded-full ${app.statusColor || "bg-gray-100 text-gray-700"}`}>{app.status}</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center flex-wrap gap-2 text-xs uppercase tracking-wide text-gray-500">
+            <span className={app.categoryColor}>{app.category}</span>
+            <span className={`px-2 py-0.5 rounded-full ${app.statusColor || "bg-gray-100 text-gray-700"}`}>{app.status}</span>
+          </div>
+          {platform && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onPlatformClick?.(platform);
+              }}
+              className="px-2.5 py-1 rounded-full bg-[#612D91]/10 text-[#612D91] text-[10px] font-semibold hover:bg-[#612D91]/20 transition-colors flex items-center gap-1"
+              title={`Built on ${platform.name}`}
+            >
+              <Layers className="w-3 h-3" />
+              {platform.name}
+            </button>
+          )}
         </div>
         <div>
           <h3 className="text-xl font-semibold text-gray-900">{app.name}</h3>
@@ -870,10 +1159,12 @@ function AppCard({ app, onLaunch, readOnly, onRequestLogin }) {
             <p className="uppercase tracking-wide text-gray-500 font-semibold">Vertical</p>
             <p className="font-semibold text-gray-900">{app.vertical ?? app.category}</p>
           </div>
-          <div className="rounded-2xl border border-gray-200/80 px-3 py-1.5">
-            <p className="uppercase tracking-wide text-gray-500 font-semibold">Models</p>
-            <p className="font-semibold text-gray-900">{app.models ?? "GPT-4o mini · Sonnet 3.5"}</p>
-          </div>
+          {platform && (
+            <div className="rounded-2xl border border-[#612D91]/20 bg-[#612D91]/5 px-3 py-1.5">
+              <p className="uppercase tracking-wide text-[#612D91] font-semibold">Platform</p>
+              <p className="font-semibold text-[#612D91]">{platform.name}</p>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-gray-600">
@@ -882,24 +1173,44 @@ function AppCard({ app, onLaunch, readOnly, onRequestLogin }) {
               {tag}
             </span>
           ))}
+          {app.isCloned && (
+            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">
+              Cloned
+            </span>
+          )}
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            if (readOnly) {
-              onRequestLogin?.();
-              return;
-            }
-            if (app.launchKey) {
-              onLaunch?.(app.launchKey);
-            }
-          }}
-          className="mt-auto inline-flex items-center justify-between rounded-full border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:text-[#612D91] hover:border-[#612D91]/60 transition"
-        >
-          {readOnly ? "Sign in to launch" : app.ctaLabel || "Open"}
-          <ArrowRight className="w-4 h-4" />
-        </button>
+        <div className="flex flex-col gap-2 mt-auto">
+          <button
+            type="button"
+            onClick={() => {
+              if (readOnly) {
+                onRequestLogin?.();
+                return;
+              }
+              if (app.launchKey) {
+                onLaunch?.(app.launchKey);
+              }
+            }}
+            className="inline-flex items-center justify-between rounded-full border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:text-[#612D91] hover:border-[#612D91]/60 transition"
+          >
+            {readOnly ? "Sign in to launch" : app.ctaLabel || "Open"}
+            <ArrowRight className="w-4 h-4" />
+          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCloneTemplate?.(app);
+              }}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-[#612D91]/30 bg-[#612D91]/5 px-4 py-2 text-sm font-semibold text-[#612D91] hover:bg-[#612D91]/10 transition"
+            >
+              <Copy className="w-4 h-4" />
+              Clone Template
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

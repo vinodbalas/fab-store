@@ -1,9 +1,14 @@
 import React from "react";
-import { ArrowLeft, FileText, Code, BookOpen, CheckCircle2, ArrowRight, Layers, Database, Brain, Zap, GitBranch } from "lucide-react";
+import { ArrowLeft, FileText, Code, BookOpen, CheckCircle2, ArrowRight, Layers, Database, Brain, Zap, GitBranch, TrendingUp, Users, Globe } from "lucide-react";
 import { fabApps } from "../data/fabApps";
+import { enrichPlatformWithMetrics } from "../data/fabPlatforms";
 import { motion } from "framer-motion";
 
 export default function PlatformDetail({ platform, onBack, onLaunch, readOnly, onRequestLogin }) {
+  // Enrich platform with metrics
+  const enrichedPlatform = enrichPlatformWithMetrics(platform);
+  const metrics = enrichedPlatform.metrics || { solutionCount: 0, industries: [], liveSolutions: 0 };
+  
   // Find solutions built on this platform
   const solutions = fabApps.filter((app) => app.platformId === platform.id);
 
@@ -27,6 +32,43 @@ export default function PlatformDetail({ platform, onBack, onLaunch, readOnly, o
           <p className="text-lg text-gray-600 mt-1">{platform.tagline}</p>
         </div>
       </div>
+
+      {/* Platform Metrics Section */}
+      <section className="rounded-[32px] bg-gradient-to-br from-[#612D91]/10 to-[#A64AC9]/10 border border-[#612D91]/20 shadow-[0_35px_85px_rgba(15,10,45,0.12)] p-8 space-y-6 backdrop-blur">
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Platform Metrics</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="rounded-xl bg-white/80 border border-[#612D91]/20 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="w-5 h-5 text-[#612D91]" />
+                <span className="text-sm font-semibold text-gray-600">Solutions Built</span>
+              </div>
+              <p className="text-3xl font-bold text-gray-900">{metrics.solutionCount}</p>
+              <p className="text-xs text-gray-500 mt-1">{metrics.liveSolutions} live in production</p>
+            </div>
+            <div className="rounded-xl bg-white/80 border border-[#612D91]/20 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Globe className="w-5 h-5 text-[#612D91]" />
+                <span className="text-sm font-semibold text-gray-600">Industries Served</span>
+              </div>
+              <p className="text-3xl font-bold text-gray-900">{metrics.industriesCount || 1}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {metrics.industries && metrics.industries.length > 0 
+                  ? metrics.industries.join(", ")
+                  : platform.industry}
+              </p>
+            </div>
+            <div className="rounded-xl bg-white/80 border border-[#612D91]/20 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-5 h-5 text-[#612D91]" />
+                <span className="text-sm font-semibold text-gray-600">Status</span>
+              </div>
+              <p className="text-3xl font-bold text-gray-900">{platform.status}</p>
+              <p className="text-xs text-gray-500 mt-1">Platform availability</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Overview Section */}
       <section className="rounded-[32px] bg-white/95 border border-white/40 shadow-[0_35px_85px_rgba(15,10,45,0.12)] p-8 space-y-6 backdrop-blur">
@@ -54,8 +96,17 @@ export default function PlatformDetail({ platform, onBack, onLaunch, readOnly, o
       {solutions.length > 0 && (
         <section className="rounded-[32px] bg-white/95 border border-white/40 shadow-[0_35px_85px_rgba(15,10,45,0.12)] p-8 space-y-6 backdrop-blur">
           <div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Solutions Built on {platform.name}</h2>
-            <p className="text-gray-600">These solutions leverage {platform.name} to deliver industry-specific capabilities.</p>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h2 className="text-2xl font-semibold text-gray-900">Solutions Built on {platform.name}</h2>
+                <p className="text-gray-600 mt-1">
+                  {solutions.length} {solutions.length === 1 ? 'solution' : 'solutions'} leveraging {platform.name} capabilities
+                </p>
+              </div>
+              <div className="px-4 py-2 rounded-full bg-[#612D91]/10 text-[#612D91] text-sm font-semibold">
+                {metrics.solutionCount} Total
+              </div>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             {solutions.map((app) => (

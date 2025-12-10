@@ -734,7 +734,7 @@ export const authAPI = {
         user: {
           email,
           name: email.split('@')[0],
-          avatar: '/vk.jpeg',
+          avatar: '/vkv.jpeg',
         },
         token: 'mock-jwt-token',
       };

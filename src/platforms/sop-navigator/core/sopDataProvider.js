@@ -1,7 +1,7 @@
 /**
  * SOP Data Provider
  * Platform-agnostic interface for SOP data access
- * Solutions using SOP Navigator pass their SOP data through this provider
+ * Solutions using SOP Executor pass their SOP data through this provider
  */
 
 export class SOPDataProvider {

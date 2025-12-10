@@ -77,7 +77,7 @@ export default function ReasoningCard({ step, index, onSOPView, item, sopProvide
     if (index === 0) {
       return {
         icon: Info,
-        title: "Analysis",
+        title: "Intake Agent",
         color: "blue",
         bgGradient: "from-blue-500/10 to-indigo-500/10 dark:from-blue-500/20 dark:to-indigo-500/20",
         borderColor: "border-blue-300 dark:border-blue-600",
@@ -89,7 +89,7 @@ export default function ReasoningCard({ step, index, onSOPView, item, sopProvide
     if (index === 1) {
       return {
         icon: Sparkles,
-        title: "SOP Matcher",
+        title: "SOP Reasoning",
         color: "purple",
         bgGradient: "from-purple-500/10 to-pink-500/10 dark:from-purple-500/20 dark:to-pink-500/20",
         borderColor: "border-purple-300 dark:border-purple-600",
@@ -101,7 +101,7 @@ export default function ReasoningCard({ step, index, onSOPView, item, sopProvide
     if (index === 2) {
       return {
         icon: AlertCircle,
-        title: "Risk Assessor",
+        title: "SLA Risk Assessment",
         color: "orange",
         bgGradient: "from-orange-500/10 to-red-500/10 dark:from-orange-500/20 dark:to-red-500/20",
         borderColor: "border-orange-300 dark:border-orange-600",
@@ -137,6 +137,9 @@ export default function ReasoningCard({ step, index, onSOPView, item, sopProvide
   const SOP_INDEX = sopProvider?.getSOPIndex() || {};
   const scenarioKey = scenarioTag && SCENARIO_SOPS[scenarioTag] ? scenarioTag : null;
   const itemStatusKey = item?.status && SOP_INDEX[item.status] ? item.status : null;
+  const scenarioSOP = scenarioKey ? SCENARIO_SOPS[scenarioKey] : null;
+  const statusSOP = itemStatusKey ? SOP_INDEX[itemStatusKey] : null;
+  const primarySOP = scenarioSOP || statusSOP || null;
 
   const formatCurrency = (value) => {
     if (!value && value !== 0) return null;
@@ -147,6 +150,20 @@ export default function ReasoningCard({ step, index, onSOPView, item, sopProvide
     if (!item?.date) return null;
     const days = Math.max(0, Math.floor((new Date() - new Date(item.date)) / (1000 * 60 * 60 * 24)));
     return `${days} day${days === 1 ? "" : "s"} ago`;
+  };
+
+  const getSLASummary = () => {
+    const days =
+      typeof item?.daysUntilSLA === "number"
+        ? item.daysUntilSLA
+        : typeof item?.daysUntilDeadline === "number"
+        ? item.daysUntilDeadline
+        : null;
+    if (days === null) return null;
+    if (days < 0) return `${Math.abs(days)} day${Math.abs(days) === 1 ? "" : "s"} overdue`;
+    if (days === 0) return "Due today";
+    if (days === 1) return "1 day remaining";
+    return `${days} days remaining`;
   };
 
   const resolveScenarioByPage = (page) => {
@@ -249,7 +266,7 @@ export default function ReasoningCard({ step, index, onSOPView, item, sopProvide
       transition={{ delay: index * 0.2, type: "spring", stiffness: 300, damping: 25 }}
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
-      className={`relative h-full rounded-xl border-2 ${config.borderColor} bg-gradient-to-br ${config.bgGradient} p-4 shadow-lg hover:shadow-xl transition-all flex flex-col overflow-hidden`}
+      className={`relative rounded-xl border-2 ${config.borderColor} bg-gradient-to-br ${config.bgGradient} p-3 md:p-3 shadow-lg hover:shadow-xl transition-all flex flex-col overflow-hidden`}
     >
       {/* Animated background on hover */}
       <motion.div
@@ -262,10 +279,10 @@ export default function ReasoningCard({ step, index, onSOPView, item, sopProvide
       />
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col h-full">
+        <div className="relative z-10 flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-start justify-between mb-3 shrink-0">
-          <div className="flex items-center gap-2.5">
+        <div className="flex items-center justify-between mb-1.5 shrink-0">
+          <div className="flex items-center gap-2">
             <motion.div
               className={`p-2.5 rounded-xl ${config.iconBg} shadow-md`}
               animate={isStreaming ? {
@@ -283,13 +300,13 @@ export default function ReasoningCard({ step, index, onSOPView, item, sopProvide
             >
               <StepIcon className={`w-5 h-5 ${config.iconColor}`} />
             </motion.div>
-            <div>
-              <h3 className="text-base font-bold text-gray-900 dark:text-white leading-tight">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm md:text-base font-bold text-gray-900 dark:text-white leading-tight">
                 {config.title}
               </h3>
               {confidence > 0 && (
                 <motion.span
-                  className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${getConfidenceBg(confidence)} ${getConfidenceColor(confidence)}`}
+                  className={`inline-block px-2 py-0.5 rounded-full text-[9px] md:text-[10px] font-semibold ${getConfidenceBg(confidence)} ${getConfidenceColor(confidence)}`}
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: "spring", delay: 0.3 }}
@@ -302,7 +319,7 @@ export default function ReasoningCard({ step, index, onSOPView, item, sopProvide
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 min-h-0 mb-3 space-y-4">
+        <div className="flex-1 min-h-0 mb-1.5 space-y-2.5">
           {index === 0 && (
             <>
               <motion.div
@@ -310,8 +327,7 @@ export default function ReasoningCard({ step, index, onSOPView, item, sopProvide
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 + 0.1 }}
               >
-                <SectionLabel>Analysis Summary</SectionLabel>
-                <p className="text-sm text-gray-800 dark:text-gray-100 leading-relaxed">
+                <p className="text-[13px] md:text-sm text-gray-800 dark:text-gray-100 leading-snug">
                   {isStreaming ? (
                     <>
                       {primaryText}
@@ -327,10 +343,23 @@ export default function ReasoningCard({ step, index, onSOPView, item, sopProvide
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 + 0.2 }}
               >
-                <SectionLabel>Item Details</SectionLabel>
+                <SectionLabel>Key Intake Signals</SectionLabel>
                 <div className="flex flex-wrap gap-2">
                   <DetailPill label="Amount" value={formatCurrency(item?.amount)} />
                   <DetailPill label="Age" value={getItemAge()} />
+                  {item?.aiPriority != null && (
+                    <DetailPill
+                      label="AI Priority"
+                      value={`${item.aiPriority.toFixed ? item.aiPriority.toFixed(1) : item.aiPriority}/10`}
+                    />
+                  )}
+                  {item?.aiRiskLevel && (
+                    <DetailPill
+                      label="Risk Level"
+                      value={item.aiRiskLevel.charAt(0).toUpperCase() + item.aiRiskLevel.slice(1)}
+                    />
+                  )}
+                  {getSLASummary() && <DetailPill label="SLA" value={getSLASummary()} />}
                 </div>
               </motion.div>
             </>
@@ -343,19 +372,18 @@ export default function ReasoningCard({ step, index, onSOPView, item, sopProvide
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 + 0.1 }}
               >
-                <SectionLabel>SOP Match Result</SectionLabel>
-                <p className="text-sm text-gray-800 dark:text-gray-100 leading-relaxed">
+                <p className="text-[13px] md:text-sm text-gray-800 dark:text-gray-100 leading-snug line-clamp-2">
                   {primaryText}
                 </p>
               </motion.div>
 
-              {matchedSopRefs.length > 0 && (
+              {(matchedSopRefs.length > 0 || primarySOP || scenarioTag || item?.cptCode || item?.icd10Code) && (
                 <motion.div
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 + 0.2 }}
                 >
-                  <SectionLabel>Matched SOPs</SectionLabel>
+                  <SectionLabel>SOPs &amp; Match Criteria</SectionLabel>
                   <div className="flex flex-wrap gap-1.5">
                     {matchedSopRefs.map((ref, idx) => {
                       const sopMatch = ref.match(/(\d+(?:\.\d+){0,2})/);
@@ -373,68 +401,49 @@ export default function ReasoningCard({ step, index, onSOPView, item, sopProvide
                         </motion.button>
                       );
                     })}
+
+                    {primarySOP && (
+                      <span className="px-2.5 py-1 rounded text-[10px] font-semibold bg-purple-50/80 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 border border-purple-200/70 dark:border-purple-700/60">
+                        {primarySOP.title}
+                        {primarySOP.page && primarySOP.page !== "N/A" && ` · ${primarySOP.page}`}
+                        {primarySOP.state && primarySOP.state !== "All" && ` · ${primarySOP.state}`}
+                      </span>
+                    )}
+
                     {scenarioTag && (
-                      <span className="px-2.5 py-1 rounded text-[10px] font-semibold bg-white/60 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 capitalize">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-100/60 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-300/50 dark:border-purple-600/40 capitalize">
                         {scenarioTag.replace(/-/g, " ")}
                       </span>
                     )}
-                    {normalizedStep?.text && normalizedStep.text.match(/Page\s+(\d+)/i) && (() => {
-                      const match = normalizedStep.text.match(/Page\s+(\d+)/i);
-                      const label = `Page ${match[1]}`;
-                      return (
-                        <motion.button
-                          key="page-tag"
-                          onClick={() => handleSOPClick(label)}
-                          className="px-2.5 py-1 rounded text-[10px] font-semibold bg-white/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          {label}
-                        </motion.button>
-                      );
-                    })()}
+
+                    {item?.cptCode && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-100/60 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-300/50 dark:border-purple-600/40">
+                        CPT: {item.cptCode}
+                      </span>
+                    )}
+                    {item?.icd10Code && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-100/60 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-300/50 dark:border-purple-600/40">
+                        ICD-10: {item.icd10Code}
+                      </span>
+                    )}
+
+                    {normalizedStep?.text && (
+                      <>
+                        {(normalizedStep.text.toLowerCase().includes("prior auth") || normalizedStep.text.toLowerCase().includes("prior-auth")) && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-100/60 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-300/50 dark:border-purple-600/40">
+                            prior auth
+                          </span>
+                        )}
+                        {normalizedStep.text.toLowerCase().includes("authorization") && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-100/60 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-300/50 dark:border-purple-600/40">
+                            authorization
+                          </span>
+                        )}
+                      </>
+                    )}
                   </div>
                 </motion.div>
               )}
-
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 + 0.3 }}
-              >
-                <SectionLabel>Match Criteria</SectionLabel>
-                <div className="flex flex-wrap gap-1.5">
-                  {scenarioTag && (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-100/60 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-300/50 dark:border-purple-600/40 capitalize">
-                      {scenarioTag.replace(/-/g, " ")}
-                    </span>
-                  )}
-                  {item?.cptCode && (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-100/60 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-300/50 dark:border-purple-600/40">
-                      CPT: {item.cptCode}
-                    </span>
-                  )}
-                  {item?.icd10Code && (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-100/60 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-300/50 dark:border-purple-600/40">
-                      ICD-10: {item.icd10Code}
-                    </span>
-                  )}
-                  {normalizedStep?.text && (
-                    <>
-                      {(normalizedStep.text.toLowerCase().includes("prior auth") || normalizedStep.text.toLowerCase().includes("prior-auth")) && (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-100/60 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-300/50 dark:border-purple-600/40">
-                          prior auth
-                        </span>
-                      )}
-                      {normalizedStep.text.toLowerCase().includes("authorization") && (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-purple-100/60 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-300/50 dark:border-purple-600/40">
-                          authorization
-                        </span>
-                      )}
-                    </>
-                  )}
-                </div>
-              </motion.div>
             </>
           )}
 
@@ -445,8 +454,7 @@ export default function ReasoningCard({ step, index, onSOPView, item, sopProvide
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 + 0.1 }}
               >
-                <SectionLabel>Risk Assessment</SectionLabel>
-                <p className="text-sm text-gray-800 dark:text-gray-100 leading-relaxed">
+                <p className="text-[13px] md:text-sm text-gray-800 dark:text-gray-100 leading-snug line-clamp-2">
                   {primaryText}
                 </p>
               </motion.div>
@@ -455,21 +463,26 @@ export default function ReasoningCard({ step, index, onSOPView, item, sopProvide
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 + 0.2 }}
               >
-                <SectionLabel>Risk Indicators</SectionLabel>
+                <SectionLabel>Risk &amp; SLA Indicators</SectionLabel>
                 <div className="flex flex-wrap gap-1.5">
-                  {item?.amount && item.amount < 2000 && (
+                  {item?.amount && (
                     <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-orange-100/70 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border border-orange-300/50 dark:border-orange-600/50">
-                      Low value
+                      {item.amount > 10000 ? "High value" : item.amount > 3000 ? "Medium value" : "Low value"}
                     </span>
                   )}
-                  {item?.date && Math.floor((new Date() - new Date(item.date)) / (1000 * 60 * 60 * 24)) < 7 && (
+                  {getSLASummary() && (
                     <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-orange-100/70 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border border-orange-300/50 dark:border-orange-600/50">
-                      Low timeline
+                      SLA: {getSLASummary()}
                     </span>
                   )}
                   {item?.status && (
                     <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-orange-100/70 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border border-orange-300/50 dark:border-orange-600/50">
                       Status: {item.status}
+                    </span>
+                  )}
+                  {item?.aiRiskLevel && (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-orange-100/70 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border border-orange-300/50 dark:border-orange-600/50">
+                      AI Risk: {item.aiRiskLevel.charAt(0).toUpperCase() + item.aiRiskLevel.slice(1)}
                     </span>
                   )}
                 </div>
@@ -490,14 +503,8 @@ export default function ReasoningCard({ step, index, onSOPView, item, sopProvide
         </div>
 
         {/* Progress Bar */}
-        <div className="shrink-0">
-          <div className="flex items-center justify-between text-[10px] text-gray-600 dark:text-gray-400 mb-1.5">
-            <span className="font-semibold">Progress</span>
-            <span className={`font-bold ${actualProgress === 100 ? "text-green-600 dark:text-green-400" : config.iconColor}`}>
-              {actualProgress}%
-            </span>
-          </div>
-          <div className="h-2 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden shadow-inner">
+        <div className="shrink-0 mt-1">
+          <div className="h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden shadow-inner">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${actualProgress}%` }}
@@ -521,6 +528,9 @@ export default function ReasoningCard({ step, index, onSOPView, item, sopProvide
                 }}
               />
             )}
+          </div>
+          <div className="mt-0.5 text-[10px] text-gray-600 dark:text-gray-400 text-right font-semibold">
+            {actualProgress}%
           </div>
         </div>
       </div>

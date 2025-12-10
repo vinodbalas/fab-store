@@ -32,10 +32,10 @@ export default function AIHub({ case: caseData, onBack }) {
         sopOpen={sopOpen}
       />
       
-      {/* Main content area with SOP drawer on right */}
-      <div className="flex flex-1 overflow-hidden relative">
-        {/* Main console - takes full width when SOP closed */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Main content area with SOP sidebar on right */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Main console - flexes to fill available space */}
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           <UnifiedAIConsole
             case={caseData}
             caseId={caseData?.id}
@@ -44,13 +44,13 @@ export default function AIHub({ case: caseData, onBack }) {
           />
         </div>
 
-        {/* SOP Reference Panel - Right side drawer (overlays when open) */}
+        {/* SOP Reference Panel - Resizable sidebar */}
         <SOPReferencePanel
           claim={caseData} // Reuse Cogniclaim's SOPReferencePanel (it accepts generic item)
           activeRefs={activeRefs}
           isOpen={sopOpen}
           onClose={() => setSopOpen(false)}
-          onOpenViewer={handleSOPView}
+          itemLabel="case"
         />
       </div>
 

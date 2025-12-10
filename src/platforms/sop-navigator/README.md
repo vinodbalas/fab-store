@@ -1,10 +1,10 @@
-# SOP Navigator Platform
+# SOP Executor Platform
 
 A reusable platform for building SOP-native solutions across industries. Provides AI reasoning, SOP matching, and compliance guardrails out of the box.
 
 ## Architecture
 
-SOP Navigator follows a modular architecture:
+SOP Executor follows a modular architecture:
 
 - **Core**: Platform utilities and data providers
 - **Services/AI**: Multi-agent reasoning engine and chat agent
@@ -56,7 +56,7 @@ const response = await chatAgent.sendChatMessage(message, context, onToken);
 
 ## Example: Cogniclaim
 
-Cogniclaim is a solution built on SOP Navigator. See `src/apps/cogniclaim/services/ai/platformAdapter.js` for reference.
+Cogniclaim is a solution built on SOP Executor. See `src/apps/cogniclaim/services/ai/platformAdapter.js` for reference.
 
 ## Platform Components
 

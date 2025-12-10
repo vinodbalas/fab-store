@@ -387,6 +387,17 @@ export const aiInsightsAPI = {
             affectedCount: 8,
             recommendation: 'Setup template reminder for Apex Health',
           },
+          {
+            id: 'anomaly-3',
+            type: 'volume',
+            title: 'Unusual volume spike: Regional Health',
+            description: 'AI detected 3x increase in claims volume from Regional Health this week. May indicate billing system issue or legitimate surge.',
+            severity: 'medium',
+            confidence: 0.79,
+            affectedClaims: ['CLM-015', 'CLM-018', 'CLM-022'],
+            affectedCount: 12,
+            recommendation: 'Verify billing system status with Regional Health',
+          },
         ];
       } else {
         // Backend mode: real API call
@@ -735,7 +746,7 @@ export const authAPI = {
         user: {
           email,
           name: email.split('@')[0],
-          avatar: '/vk.jpeg',
+          avatar: '/vkv.jpeg',
         },
         token: 'mock-jwt-token',
       };

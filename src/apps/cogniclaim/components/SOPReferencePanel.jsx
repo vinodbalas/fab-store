@@ -1,4 +1,4 @@
-import { ChevronDown, Sparkles, FileText, ExternalLink, X } from "lucide-react";
+import { PanelRight, FileText, ExternalLink, X, Sparkles, ChevronDown, BookOpen, Search } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SCENARIO_SOPS } from "../data/sops";
@@ -35,7 +35,7 @@ const getSOPsFromReferences = (references = []) => {
   return sops;
 };
 
-function Row({ s, active, onOpenViewer, claimStatus, scenario }) {
+function SOPRow({ sop, active, onOpenViewer, claimStatus, scenario, searchQuery = "" }) {
   const [open, setOpen] = useState(active);
 
   // Auto-expand when highlighted
@@ -45,64 +45,83 @@ function Row({ s, active, onOpenViewer, claimStatus, scenario }) {
     }
   }, [active]);
 
+  // Highlight search matches
+  const highlightText = (text, query) => {
+    if (!query) return text;
+    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    return parts.map((part, i) => 
+      part.toLowerCase() === query.toLowerCase() ? (
+        <mark key={i} className="bg-yellow-200 dark:bg-yellow-900/50 px-0.5 rounded">{part}</mark>
+      ) : part
+    );
+  };
+
   return (
     <motion.div
       initial={false}
       animate={{
         borderColor: active ? "#612D91" : undefined,
         boxShadow: active 
-          ? "0 0 0 3px rgba(97, 45, 145, 0.1), 0 4px 6px -1px rgba(97, 45, 145, 0.1)" 
+          ? "0 0 0 2px rgba(97, 45, 145, 0.15), 0 2px 8px -2px rgba(97, 45, 145, 0.2)" 
           : undefined,
       }}
-      transition={{ duration: 0.3 }}
-      className={`rounded-lg border-2 ${
+      transition={{ duration: 0.2 }}
+      className={`rounded-xl border-2 ${
         active 
-          ? "border-[#612D91] bg-gradient-to-br from-[#F5F3FF] to-[#EDE9FE]" 
-          : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
-      } shadow-sm overflow-hidden`}
+          ? "border-[#612D91] bg-gradient-to-br from-[#F5F3FF] to-[#EDE9FE] dark:from-[#612D91]/10 dark:to-[#A64AC9]/10" 
+          : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-600"
+      } shadow-sm overflow-hidden transition-all`}
     >
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`w-full px-4 py-3 flex items-center justify-between transition-colors ${
+        className={`w-full px-4 py-3.5 flex items-center justify-between transition-colors ${
           active 
             ? "bg-gradient-to-r from-[#F5F3FF]/50 to-transparent hover:from-[#F5F3FF] hover:to-[#EDE9FE]" 
             : "hover:bg-gray-50 dark:hover:bg-gray-800"
         }`}
       >
-        <div className="flex items-center gap-3 text-sm">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
           <motion.span
             animate={{
-              scale: active ? [1, 1.1, 1] : 1,
+              scale: active ? [1, 1.05, 1] : 1,
             }}
             transition={{
               duration: 0.5,
               repeat: active ? Infinity : 0,
               repeatDelay: 2,
             }}
-            className={`text-xs font-mono px-2.5 py-1 rounded-md font-semibold ${
+            className={`text-xs font-mono px-2.5 py-1 rounded-md font-semibold shrink-0 ${
               active
                 ? "bg-[#612D91] text-white shadow-md"
                 : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
             }`}
           >
-            {s.id}
+            {sop.id}
           </motion.span>
-          <span className={active ? "font-semibold text-[#612D91] dark:text-[#A64AC9]" : ""}>
-            {s.title}
-          </span>
+          <div className="flex-1 min-w-0">
+            <div className={`text-sm font-medium truncate ${active ? "text-[#612D91] dark:text-[#A64AC9]" : "text-gray-900 dark:text-gray-100"}`}>
+              {highlightText(sop.title, searchQuery)}
+            </div>
+            {sop.page && (
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {sop.page}
+              </div>
+            )}
+          </div>
           {active && (
             <motion.div
               animate={{ rotate: [0, 10, -10, 0] }}
               transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 2 }}
+              className="shrink-0"
             >
               <Sparkles className="w-4 h-4 text-[#612D91]" />
             </motion.div>
           )}
         </div>
         <ChevronDown 
-          className={`w-4 h-4 transition-transform duration-300 ${
+          className={`w-4 h-4 transition-transform duration-200 shrink-0 ml-2 ${
             open ? "rotate-180" : ""
-          } ${active ? "text-[#612D91]" : ""}`} 
+          } ${active ? "text-[#612D91]" : "text-gray-400"}`} 
         />
       </button>
       
@@ -113,24 +132,27 @@ function Row({ s, active, onOpenViewer, claimStatus, scenario }) {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ 
-              duration: 0.3,
+              duration: 0.2,
               ease: "easeInOut"
             }}
             className="overflow-hidden"
           >
             <div className={`px-4 pb-4 pt-2 space-y-3 ${
               active 
-                ? "text-[#4B2E83] dark:text-[#A64AC9] bg-white/50" 
+                ? "text-[#4B2E83] dark:text-[#A64AC9] bg-white/50 dark:bg-gray-900/50" 
                 : "text-gray-600 dark:text-gray-300"
             }`}>
               <div className="text-xs leading-relaxed">
-                {s.text}
+                {highlightText(sop.text, searchQuery)}
               </div>
               
               {/* Open PDF Viewer Button */}
               <button
-                onClick={() => onOpenViewer?.(s.id, s.scenario || null, claimStatus, null)}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium bg-[#612D91] text-white rounded-md hover:bg-[#512579] transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenViewer?.(sop.id, sop.scenario || null, claimStatus, null);
+                }}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-semibold bg-gradient-to-r from-[#612D91] to-[#A64AC9] text-white rounded-lg hover:from-[#512579] hover:to-[#8B3AA8] transition-all shadow-md hover:shadow-lg"
               >
                 <FileText className="w-3.5 h-3.5" />
                 Open Full SOP Document
@@ -138,15 +160,18 @@ function Row({ s, active, onOpenViewer, claimStatus, scenario }) {
               </button>
               
               {/* Step Navigation */}
-              {s.text && s.text.includes('\n\n') && (
+              {sop.text && sop.text.includes('\n\n') && (
                 <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                  <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Steps:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {s.text.split('\n\n').map((step, idx) => (
+                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Quick Steps:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {sop.text.split('\n\n').map((step, idx) => (
                       <button
                         key={idx}
-                        onClick={() => onOpenViewer?.(s.id, s.scenario || null, claimStatus, idx)}
-                        className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenViewer?.(sop.id, sop.scenario || null, claimStatus, idx);
+                        }}
+                        className="px-2.5 py-1.5 text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium"
                       >
                         Step {idx + 1}
                       </button>
@@ -162,11 +187,13 @@ function Row({ s, active, onOpenViewer, claimStatus, scenario }) {
   );
 }
 
-export default function SOPReferencePanel({ activeRefs = [], claim, isOpen = false, onClose }) {
+export default function SOPReferencePanel({ activeRefs = [], claim, isOpen = false, onClose, itemLabel = "item" }) {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerSopId, setViewerSopId] = useState(null);
   const [viewerScenario, setViewerScenario] = useState(null);
   const [viewerStepIndex, setViewerStepIndex] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [width, setWidth] = useState(400); // Default width
 
   const activeIds = activeRefs;
   const claimStatus = claim?.status;
@@ -198,6 +225,18 @@ export default function SOPReferencePanel({ activeRefs = [], claim, isOpen = fal
     return combined;
   }, [scenarioSOPs]);
 
+  // Filter SOPs by search query
+  const filteredSOPs = useMemo(() => {
+    if (!searchQuery) return allSOPs;
+    const query = searchQuery.toLowerCase();
+    return allSOPs.filter(sop => 
+      sop.title.toLowerCase().includes(query) ||
+      sop.text.toLowerCase().includes(query) ||
+      sop.id.toLowerCase().includes(query) ||
+      (sop.page && sop.page.toLowerCase().includes(query))
+    );
+  }, [allSOPs, searchQuery]);
+
   // Check if an SOP ID matches any active reference
   const isActive = (sopId) => {
     // Check if it's a direct match
@@ -213,98 +252,147 @@ export default function SOPReferencePanel({ activeRefs = [], claim, isOpen = fal
     return false;
   };
 
+  // Resize handler
+  const [isResizing, setIsResizing] = useState(false);
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e) => {
+      const newWidth = window.innerWidth - e.clientX;
+      if (newWidth >= 300 && newWidth <= 800) {
+        setWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
+  if (!isOpen) return null;
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+    <>
+      {/* Resizable Sidebar */}
+      <motion.aside
+        initial={{ width: 0, opacity: 0 }}
+        animate={{ width: width, opacity: 1 }}
+        exit={{ width: 0, opacity: 0 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        className="relative bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 shadow-xl flex flex-col h-full shrink-0"
+        style={{ width: `${width}px`, minWidth: `${width}px` }}
+      >
+        {/* Header */}
+        <div className="bg-gradient-to-r from-[#612D91] to-[#A64AC9] text-white px-4 py-3.5 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5">
+            <BookOpen className="w-5 h-5" />
+            <div>
+              <div className="font-semibold text-sm">SOP Reference</div>
+              {activeIds.length > 0 && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="text-xs text-white/80 mt-0.5"
+                >
+                  {activeIds.length} active {activeIds.length === 1 ? 'reference' : 'references'}
+                </motion.div>
+              )}
+            </div>
+          </div>
+          <button
             onClick={onClose}
-            className="fixed inset-0 bg-black/20 z-40"
-          />
-          
-          {/* Drawer */}
-          <motion.aside
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 bottom-0 w-96 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-50 flex flex-col"
+            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+            title="Close panel"
           >
-            {/* Header with close button */}
-            <div className="bg-gradient-to-r from-[#612D91] to-[#A64AC9] text-white px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                <span className="font-semibold">SOP Reference</span>
-                {activeIds.length > 0 && (
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="text-xs bg-white/20 px-2 py-0.5 rounded-full"
-                  >
-                    {activeIds.length}
-                  </motion.span>
-                )}
-              </div>
-              <button
-                onClick={onClose}
-                className="p-1 hover:bg-white/10 rounded transition-colors"
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Search Bar */}
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 shrink-0">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search SOPs..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#612D91]/50 dark:focus:ring-[#A64AC9]/50"
+            />
+          </div>
+        </div>
+
+        {/* SOPs list */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {filteredSOPs.length === 0 ? (
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p className="text-sm font-medium">
+                {searchQuery ? "No SOPs match your search" : "No SOPs referenced yet"}
+              </p>
+              <p className="text-xs mt-1.5">
+                {searchQuery 
+                  ? "Try a different search term" 
+                  : `SOPs will appear here as AI analyzes the ${itemLabel}`}
+              </p>
+            </div>
+          ) : (
+            filteredSOPs.map((s, index) => (
+              <motion.div
+                key={s.id}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.03 }}
               >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* SOPs list */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {allSOPs.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">
-                  <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>No SOPs referenced yet</p>
-                  <p className="text-xs mt-1">SOPs will appear here as AI analyzes the claim</p>
-                </div>
-              ) : (
-                allSOPs.map((s, index) => (
-                  <motion.div
-                    key={s.id}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                  >
-                    <Row 
-                      s={s} 
-                      active={isActive(s.id)} 
-                      onOpenViewer={handleOpenViewer}
-                      claimStatus={claimStatus}
-                      scenario={scenario}
-                    />
-                  </motion.div>
-                ))
-              )}
-            </div>
-
-            {/* SOP PDF Viewer Modal */}
-            <AnimatePresence>
-              {viewerOpen && (
-                <SOPViewer
-                  sopId={viewerSopId}
-                  stepIndex={viewerStepIndex}
-                  scenario={viewerScenario}
+                <SOPRow 
+                  sop={s} 
+                  active={isActive(s.id)} 
+                  onOpenViewer={handleOpenViewer}
                   claimStatus={claimStatus}
-                  onClose={() => {
-                    setViewerOpen(false);
-                    setViewerSopId(null);
-                    setViewerScenario(null);
-                    setViewerStepIndex(null);
-                  }}
+                  scenario={scenario}
+                  searchQuery={searchQuery}
                 />
-              )}
-            </AnimatePresence>
-          </motion.aside>
-        </>
-      )}
-    </AnimatePresence>
+              </motion.div>
+            ))
+          )}
+        </div>
+
+        {/* Resize Handle */}
+        <div
+          onMouseDown={() => setIsResizing(true)}
+          className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[#612D91]/30 transition-colors group"
+          title="Drag to resize"
+        >
+          <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-1 h-12 bg-[#612D91] rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
+      </motion.aside>
+
+      {/* SOP PDF Viewer Modal */}
+      <AnimatePresence>
+        {viewerOpen && (
+          <SOPViewer
+            sopId={viewerSopId}
+            stepIndex={viewerStepIndex}
+            scenario={viewerScenario}
+            claimStatus={claimStatus}
+            onClose={() => {
+              setViewerOpen(false);
+              setViewerSopId(null);
+              setViewerScenario(null);
+              setViewerStepIndex(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
+    </>
   );
 }

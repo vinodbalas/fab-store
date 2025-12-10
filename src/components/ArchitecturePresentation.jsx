@@ -48,11 +48,11 @@ export default function ArchitecturePresentation({ onClose }) {
     },
     {
       id: "platform-layer",
-      title: "Platform Layer: SOP Navigator",
+      title: "Platform Layer: SOP Executor",
       content: (
         <div className="space-y-6">
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">SOP Navigator Platform</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">SOP Executor Platform</h2>
             <p className="text-lg text-gray-600">
               Industry-agnostic platform for SOP-driven AI solutions
             </p>
@@ -110,11 +110,11 @@ export default function ArchitecturePresentation({ onClose }) {
     },
     {
       id: "solution-layer",
-      title: "Solution Layer: Cogniclaim & TP Resolve",
+      title: "Solution Layer: Cogniclaim & TP Resolve Appeals",
       content: (
         <div className="space-y-6">
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Solutions Built on SOP Navigator</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Solutions Built on SOP Executor</h2>
             <p className="text-lg text-gray-600">
               Industry-specific applications leveraging platform capabilities
             </p>
@@ -139,7 +139,7 @@ export default function ArchitecturePresentation({ onClose }) {
             </div>
             
             <div className="p-6 rounded-xl border-2 border-[#4B5563] bg-gradient-to-br from-[#4B5563]/5 to-[#6B7280]/5">
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">TP Resolve</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">TP Resolve Appeals</h3>
               <p className="text-gray-700 mb-4">
                 Appeals & Grievances resolution solution for healthcare appeals, complaints, and regulatory compliance.
               </p>
@@ -452,7 +452,7 @@ export default function ArchitecturePresentation({ onClose }) {
                         <div class="section">
                           <h2>Architecture Layers</h2>
                           <div class="highlight">
-                            <strong>Platform Layer:</strong> Reusable, industry-agnostic platforms (e.g., SOP Navigator) providing core AI capabilities, reasoning engines, and compliance frameworks.
+                            <strong>Platform Layer:</strong> Reusable, industry-agnostic platforms (e.g., SOP Executor) providing core AI capabilities, reasoning engines, and compliance frameworks.
                           </div>
                           <div class="highlight">
                             <strong>Solution Layer:</strong> Industry-specific applications (Cogniclaim, TP Resolve) built on platforms, delivering tailored experiences for healthcare, finance, and other regulated domains.
@@ -462,7 +462,7 @@ export default function ArchitecturePresentation({ onClose }) {
                           </div>
                         </div>
                         <div class="section">
-                          <h2>Platform: SOP Navigator</h2>
+                          <h2>Platform: SOP Executor</h2>
                           <p><strong>Purpose:</strong> Industry-agnostic platform for SOP-driven AI solutions</p>
                           <p><strong>Core Components:</strong></p>
                           <ul>
@@ -474,7 +474,7 @@ export default function ArchitecturePresentation({ onClose }) {
                           </ul>
                         </div>
                         <div class="section">
-                          <h2>Solutions Built on SOP Navigator</h2>
+                          <h2>Solutions Built on SOP Executor</h2>
                           <p><strong>Cogniclaim:</strong> Healthcare claims intelligence solution for medical claims processing, denial management, and compliance. Features multi-line item processing, duplicate detection, and healthcare-specific SOPs.</p>
                           <p><strong>TP Resolve:</strong> Appeals & Grievances resolution solution for healthcare appeals, complaints, and regulatory compliance. Features case management, deadline tracking, and jurisdiction-specific workflows.</p>
                         </div>

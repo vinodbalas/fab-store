@@ -356,13 +356,6 @@ export default function PitchHub({ onNavigate }) {
           </button>
         )}
       </div>
-      <div className="flex-1 flex">
-        <div className="flex-1">
-          <div className="p-6">
-          </div>
-        </div>
-      </div>
-
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
         <Tabs

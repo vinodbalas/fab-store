@@ -5,7 +5,8 @@
 
 import { CheckCircle2, XCircle, AlertTriangle, Clock, FileText, ChevronDown, ChevronUp, Sparkles, Shield, Zap, TrendingUp, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence, useSpring, useTransform } from "framer-motion";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { getSOPByScenario, getSOPByStatus, getSOPByCode } from "../data/sops";
 
 export default function ReasoningSummaryCard({ recommendation, steps = [], claim, onSOPView, onAction }) {
   const [expanded, setExpanded] = useState(false);
@@ -132,6 +133,41 @@ export default function ReasoningSummaryCard({ recommendation, steps = [], claim
   const keyInfo = extractKeyInfo();
   const confidence = recommendation.confidence || 0;
 
+  // Split recommendation text into a primary summary sentence and additional bullet points for readability
+  const { primarySentence, additionalSentences } = useMemo(() => {
+    const raw = (recommendation.text || "").trim();
+    if (!raw) return { primarySentence: "", additionalSentences: [] };
+
+    // Normalize whitespace and split on sentence boundaries: '.', '!' or '?' followed by space + capital/number
+    const parts = raw
+      .replace(/\s+/g, " ")
+      .split(/(?<=[.!?])\s+(?=[A-Z0-9])/)
+      .map((p) => p.trim())
+      .filter((p) => p.length > 0);
+
+    if (parts.length === 0) {
+      return { primarySentence: raw, additionalSentences: [] };
+    }
+
+    return {
+      primarySentence: parts[0],
+      additionalSentences: parts.slice(1),
+    };
+  }, [recommendation.text]);
+
+  // Derive primary SOP for display (Cogniclaim-specific)
+  const primaryScenarioSOP = claim?.scenario ? getSOPByScenario(claim.scenario) : null;
+  const primaryStatusSOP = !primaryScenarioSOP && claim?.status ? getSOPByStatus(claim.status) : null;
+  const refSOP =
+    !primaryScenarioSOP &&
+    !primaryStatusSOP &&
+    recommendation.sopRefs &&
+    recommendation.sopRefs.length > 0
+      ? getSOPByCode(recommendation.sopRefs[0]) || null
+      : null;
+
+  const primarySOP = primaryScenarioSOP || primaryStatusSOP || refSOP || null;
+
   // Action type styling with gradients
   const actionStyles = {
     approve: {
@@ -253,16 +289,63 @@ export default function ReasoningSummaryCard({ recommendation, steps = [], claim
                   {Math.round(confidence * 100)}% Confidence
                 </motion.span>
               </div>
-              <motion.p 
-                className={`text-base ${style.text} opacity-95 leading-relaxed`}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-              >
-                {recommendation.text}
-              </motion.p>
+              {primarySentence && (
+                <motion.p 
+                  className={`text-base ${style.text} opacity-95 leading-relaxed`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  {primarySentence}
+                </motion.p>
+              )}
+
+              {additionalSentences.length > 0 && (
+                <motion.ul
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.35 }}
+                  className="mt-2 space-y-1.5 text-sm text-gray-700 dark:text-gray-200"
+                >
+                  {additionalSentences.map((sentence, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="mt-1 w-1.5 h-1.5 rounded-full bg-current opacity-70" />
+                      <span className="flex-1 leading-relaxed">{sentence}</span>
+                    </li>
+                  ))}
+                </motion.ul>
+              )}
             </div>
           </motion.div>
+
+          {/* Primary SOP Summary (Cogniclaim-specific) */}
+          {primarySOP && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+              className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md rounded-lg p-3 border border-gray-200 dark:border-gray-700 shadow-sm flex items-start gap-3"
+            >
+              <div className="mt-0.5">
+                <Sparkles className="w-4 h-4 text-[#612D91]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">
+                  SOP Reference
+                </div>
+                <div className="text-sm text-gray-800 dark:text-gray-100 font-semibold mb-0.5">
+                  {primarySOP.title}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">
+                  {primarySOP.page && primarySOP.page !== "N/A"
+                    ? `Section: ${primarySOP.page}${primarySOP.state && primarySOP.state !== "All" ? ` • State: ${primarySOP.state}` : ""}`
+                    : primarySOP.state && primarySOP.state !== "All"
+                    ? `State-specific SOP • State: ${primarySOP.state}`
+                    : "Global SOP (All states)"}
+                </div>
+              </div>
+            </motion.div>
+          )}
 
           {/* Reasoning Section - Always Visible */}
           {recommendation.reasoning && (
@@ -334,9 +417,14 @@ export default function ReasoningSummaryCard({ recommendation, steps = [], claim
             <motion.button
               onClick={() => {
                 if (claim?.scenario) {
-                  onSOPView?.(claim.scenario, claim.scenario, claim?.status, null);
+                  // Prefer scenario-based SOP for Cogniclaim; highlight first step
+                  onSOPView?.(claim.scenario, claim.scenario, claim?.status, 0);
+                } else if (claim?.status) {
+                  // Fallback: status-based SOP
+                  onSOPView?.(null, null, claim.status, 0);
                 } else if (recommendation.sopRefs[0]) {
-                  onSOPView?.(recommendation.sopRefs[0], null, claim?.status, null);
+                  // Last resort: try raw reference
+                  onSOPView?.(recommendation.sopRefs[0], null, claim?.status, 0);
                 }
               }}
               className="px-4 py-2 rounded-lg font-semibold text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all flex items-center gap-2"
@@ -386,7 +474,15 @@ export default function ReasoningSummaryCard({ recommendation, steps = [], claim
                       {recommendation.sopRefs.map((ref, idx) => (
                         <motion.button
                           key={idx}
-                          onClick={() => onSOPView?.(ref, null, claim?.status, null)}
+                          onClick={() => {
+                            if (claim?.scenario) {
+                              onSOPView?.(claim.scenario, claim.scenario, claim?.status, 0);
+                            } else if (claim?.status) {
+                              onSOPView?.(null, null, claim.status, 0);
+                            } else {
+                              onSOPView?.(ref, null, claim?.status, 0);
+                            }
+                          }}
                           className="px-4 py-2 rounded-lg text-xs font-semibold bg-gradient-to-r from-[#612D91]/10 to-[#A64AC9]/10 text-[#612D91] dark:text-[#A64AC9] dark:from-[#A64AC9]/20 dark:to-[#612D91]/20 hover:from-[#612D91]/20 hover:to-[#A64AC9]/20 dark:hover:from-[#A64AC9]/30 dark:hover:to-[#612D91]/30 transition-all shadow-md hover:shadow-lg flex items-center gap-2 border border-[#612D91]/20 dark:border-[#A64AC9]/30"
                           initial={{ opacity: 0, scale: 0.8 }}
                           animate={{ opacity: 1, scale: 1 }}

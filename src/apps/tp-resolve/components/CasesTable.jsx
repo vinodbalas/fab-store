@@ -258,10 +258,10 @@ export default function CasesTable({ onSelect }) {
                             onSelect?.(caseData);
                           }}
                           className="inline-flex items-center justify-center text-[11px] px-2 py-0.5 rounded-full bg-white dark:bg-gray-900 text-[#612D91] dark:text-[#A64AC9] border border-[#612D91]/40 dark:border-[#A64AC9]/50 hover:bg-[#F5F3FF] dark:hover:bg-[#4B2E83]/40"
-                          title="Open in AI Watchtower"
+                          title="Open in AI Reasoning"
                         >
                           <Sparkles className="w-3.5 h-3.5" />
-                          <span className="sr-only">Open in AI Watchtower</span>
+                          <span className="sr-only">Open in AI Reasoning</span>
                         </button>
                       </div>
                     </td>

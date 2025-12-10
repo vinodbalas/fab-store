@@ -1,0 +1,3001 @@
+/**
+ * AI-Native Visual App Builder
+ * 
+ * Low-code/no-code builder with AI-powered app generation and drag-and-drop
+ * Inspired by ToolJet and modern AI-native platforms
+ */
+
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  X, Save, Eye, Sparkles, Layers, Database, Zap, Palette, Code, ChevronRight,
+  Plus, Trash2, Copy, Settings, Brain, Lightbulb, Wand2, ChevronDown, ChevronUp,
+  FileText, Grid, Layout, Component, Search, Monitor, Tablet, Smartphone,
+  Split, Maximize2, Minimize2, FilePlus, Edit, Move, AlignLeft, AlignCenter,
+  AlignRight, Bold, Italic, Link, Image, Video, Type, Hash, Calendar, Mail,
+  Phone, MapPin, CreditCard, User, Lock, Unlock, CheckSquare, Radio, ToggleLeft,
+  Check, BarChart3, PieChart, LineChart, TrendingUp, Upload, Tag, Badge,
+  AlertCircle, CheckCircle, Loader2, Clock, Bell, Sliders, GripVertical,
+  GripHorizontal, Menu, ArrowRight, ChevronLeft, Circle, Square, List, Sidebar, Star
+} from "lucide-react";
+import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, KeyboardSensor, closestCenter, useDroppable } from "@dnd-kit/core";
+
+// Component Templates - Pre-built blocks
+const COMPONENT_TEMPLATES = {
+  "dashboard-layout": {
+    name: "Dashboard Layout",
+    icon: Grid,
+    category: "Templates",
+    description: "Complete dashboard with metrics and charts",
+    components: [
+      { id: "comp-1", type: "container", name: "Header", props: {} },
+      { id: "comp-2", type: "grid", name: "Metrics Grid", props: { columns: 4 } },
+      { id: "comp-3", type: "chart", name: "Analytics Chart", props: {} },
+      { id: "comp-4", type: "data-table", name: "Data Table", props: {} },
+    ],
+  },
+  "form-layout": {
+    name: "Form Layout",
+    icon: FileText,
+    category: "Templates",
+    description: "Complete form with validation",
+    components: [
+      { id: "comp-1", type: "container", name: "Form Container", props: {} },
+      { id: "comp-2", type: "form", name: "Input Form", props: {} },
+    ],
+  },
+  "detail-view": {
+    name: "Detail View",
+    icon: Layers,
+    category: "Templates",
+    description: "Detail page with cards and sections",
+    components: [
+      { id: "comp-1", type: "section", name: "Header Section", props: {} },
+      { id: "comp-2", type: "metric-card", name: "Key Metrics", props: {} },
+      { id: "comp-3", type: "container", name: "Details Container", props: {} },
+    ],
+  },
+};
+
+// Component Library - Reordered: Layout first, then Platform, then UI
+const COMPONENT_LIBRARY = {
+  layout: {
+    "app-header": {
+      name: "App Header",
+      icon: Layers,
+      category: "Layout",
+      description: "Application header with branding, navbar, avatar",
+      properties: {
+        showLogo: { type: "boolean", default: true, label: "Show Logo" },
+        showNavbar: { type: "boolean", default: true, label: "Show Navbar" },
+        showAvatar: { type: "boolean", default: true, label: "Show User Avatar" },
+        showLoginInfo: { type: "boolean", default: true, label: "Show Login Info" },
+        backgroundColor: { type: "color", default: "#ffffff", label: "Background" },
+        sticky: { type: "boolean", default: true, label: "Sticky Header" },
+      },
+    },
+    "toolbar": {
+      name: "Toolbar",
+      icon: Settings,
+      category: "Layout",
+      description: "Action toolbar with buttons",
+      properties: {
+        showSearch: { type: "boolean", default: false, label: "Show Search" },
+        showActions: { type: "boolean", default: true, label: "Show Action Buttons" },
+        backgroundColor: { type: "color", default: "#f9fafb", label: "Background" },
+        padding: { type: "number", default: 12, label: "Padding" },
+      },
+    },
+    "container": {
+      name: "Container",
+      icon: Layout,
+      category: "Layout",
+      description: "Content container",
+      properties: {
+        padding: { type: "number", default: 16, label: "Padding" },
+        margin: { type: "number", default: 0, label: "Margin" },
+        backgroundColor: { type: "color", default: "#ffffff", label: "Background" },
+        borderRadius: { type: "number", default: 8, label: "Border Radius" },
+      },
+    },
+    "grid": {
+      name: "Grid",
+      icon: Grid,
+      category: "Layout",
+      description: "Grid layout",
+      properties: {
+        columns: { type: "number", default: 3, label: "Columns", min: 1, max: 12 },
+        gap: { type: "number", default: 16, label: "Gap" },
+        responsive: { type: "boolean", default: true, label: "Responsive" },
+      },
+    },
+    "section": {
+      name: "Section",
+      icon: Layers,
+      category: "Layout",
+      description: "Page section",
+      properties: {
+        padding: { type: "number", default: 24, label: "Padding" },
+        backgroundColor: { type: "color", default: "#f9fafb", label: "Background" },
+      },
+    },
+  },
+  platform: {
+    "sop-reasoning-card": {
+      name: "SOP Reasoning Card",
+      icon: Brain,
+      category: "Platform (SOP Executor)",
+      description: "AI reasoning card with SOP matching",
+      platform: "sop-executor",
+    },
+    "sop-viewer": {
+      name: "SOP Viewer",
+      icon: Layers,
+      category: "Platform (SOP Executor)",
+      description: "Document viewer for SOPs",
+      platform: "sop-executor",
+    },
+    "work-order-card": {
+      name: "Work Order Card",
+      icon: Zap,
+      category: "Platform (Field Service)",
+      description: "Field service work order display",
+      platform: "field-service",
+    },
+    "asset-card": {
+      name: "Asset Card",
+      icon: Database,
+      category: "Platform (Field Service)",
+      description: "Asset information card",
+      platform: "field-service",
+    },
+  },
+  "form-controls": {
+    "button": {
+      name: "Button",
+      icon: Zap,
+      category: "Form Controls",
+      description: "Clickable button",
+      properties: {
+        label: { type: "text", default: "Click Me", label: "Button Label" },
+        variant: { type: "select", default: "primary", label: "Variant", options: ["primary", "secondary", "outline", "ghost", "danger"] },
+        size: { type: "select", default: "medium", label: "Size", options: ["small", "medium", "large"] },
+        disabled: { type: "boolean", default: false, label: "Disabled" },
+        fullWidth: { type: "boolean", default: false, label: "Full Width" },
+        icon: { type: "text", default: "", label: "Icon Name (optional)" },
+      },
+    },
+    "input": {
+      name: "Text Input",
+      icon: Type,
+      category: "Form Controls",
+      description: "Single-line text input",
+      properties: {
+        placeholder: { type: "text", default: "Enter text...", label: "Placeholder" },
+        label: { type: "text", default: "Label", label: "Field Label" },
+        required: { type: "boolean", default: false, label: "Required" },
+        disabled: { type: "boolean", default: false, label: "Disabled" },
+        maxLength: { type: "number", default: null, label: "Max Length", min: 1 },
+        type: { type: "select", default: "text", label: "Input Type", options: ["text", "email", "password", "number", "tel", "url"] },
+      },
+    },
+    "textarea": {
+      name: "Textarea",
+      icon: FileText,
+      category: "Form Controls",
+      description: "Multi-line text input",
+      properties: {
+        placeholder: { type: "text", default: "Enter text...", label: "Placeholder" },
+        label: { type: "text", default: "Label", label: "Field Label" },
+        rows: { type: "number", default: 4, label: "Rows", min: 2, max: 20 },
+        required: { type: "boolean", default: false, label: "Required" },
+        disabled: { type: "boolean", default: false, label: "Disabled" },
+        resize: { type: "select", default: "vertical", label: "Resize", options: ["none", "vertical", "horizontal", "both"] },
+      },
+    },
+    "dropdown": {
+      name: "Dropdown",
+      icon: ChevronDown,
+      category: "Form Controls",
+      description: "Select dropdown",
+      properties: {
+        label: { type: "text", default: "Select option", label: "Field Label" },
+        options: { type: "text", default: "Option 1, Option 2, Option 3", label: "Options (comma-separated)" },
+        required: { type: "boolean", default: false, label: "Required" },
+        disabled: { type: "boolean", default: false, label: "Disabled" },
+        multiple: { type: "boolean", default: false, label: "Multiple Selection" },
+        searchable: { type: "boolean", default: false, label: "Searchable" },
+      },
+    },
+    "checkbox": {
+      name: "Checkbox",
+      icon: CheckSquare,
+      category: "Form Controls",
+      description: "Checkbox input",
+      properties: {
+        label: { type: "text", default: "Checkbox label", label: "Label" },
+        checked: { type: "boolean", default: false, label: "Checked by default" },
+        disabled: { type: "boolean", default: false, label: "Disabled" },
+      },
+    },
+    "radio": {
+      name: "Radio Button",
+      icon: Radio,
+      category: "Form Controls",
+      description: "Radio button group",
+      properties: {
+        label: { type: "text", default: "Select option", label: "Group Label" },
+        options: { type: "text", default: "Option 1, Option 2, Option 3", label: "Options (comma-separated)" },
+        defaultValue: { type: "text", default: "", label: "Default Value" },
+        disabled: { type: "boolean", default: false, label: "Disabled" },
+        layout: { type: "select", default: "vertical", label: "Layout", options: ["vertical", "horizontal"] },
+      },
+    },
+    "switch": {
+      name: "Switch/Toggle",
+      icon: ToggleLeft,
+      category: "Form Controls",
+      description: "Toggle switch",
+      properties: {
+        label: { type: "text", default: "Toggle switch", label: "Label" },
+        checked: { type: "boolean", default: false, label: "Checked by default" },
+        disabled: { type: "boolean", default: false, label: "Disabled" },
+        size: { type: "select", default: "medium", label: "Size", options: ["small", "medium", "large"] },
+      },
+    },
+    "date-picker": {
+      name: "Date Picker",
+      icon: Calendar,
+      category: "Form Controls",
+      description: "Date selection input",
+      properties: {
+        label: { type: "text", default: "Select date", label: "Field Label" },
+        required: { type: "boolean", default: false, label: "Required" },
+        disabled: { type: "boolean", default: false, label: "Disabled" },
+        mode: { type: "select", default: "single", label: "Mode", options: ["single", "range"] },
+        format: { type: "text", default: "MM/DD/YYYY", label: "Date Format" },
+      },
+    },
+    "file-upload": {
+      name: "File Upload",
+      icon: Upload,
+      category: "Form Controls",
+      description: "File upload input",
+      properties: {
+        label: { type: "text", default: "Upload file", label: "Field Label" },
+        accept: { type: "text", default: "*/*", label: "Accepted Types" },
+        multiple: { type: "boolean", default: false, label: "Multiple Files" },
+        maxSize: { type: "number", default: 10, label: "Max Size (MB)", min: 1 },
+        required: { type: "boolean", default: false, label: "Required" },
+        disabled: { type: "boolean", default: false, label: "Disabled" },
+      },
+    },
+    "slider": {
+      name: "Slider",
+      icon: Sliders,
+      category: "Form Controls",
+      description: "Range slider input",
+      properties: {
+        label: { type: "text", default: "Select value", label: "Field Label" },
+        min: { type: "number", default: 0, label: "Min Value" },
+        max: { type: "number", default: 100, label: "Max Value" },
+        step: { type: "number", default: 1, label: "Step", min: 0.1 },
+        defaultValue: { type: "number", default: 50, label: "Default Value" },
+        disabled: { type: "boolean", default: false, label: "Disabled" },
+        showValue: { type: "boolean", default: true, label: "Show Value" },
+      },
+    },
+    "rating": {
+      name: "Rating",
+      icon: Star,
+      category: "Form Controls",
+      description: "Star rating input",
+      properties: {
+        label: { type: "text", default: "Rating", label: "Field Label" },
+        max: { type: "number", default: 5, label: "Max Rating", min: 1, max: 10 },
+        defaultValue: { type: "number", default: 0, label: "Default Value" },
+        disabled: { type: "boolean", default: false, label: "Disabled" },
+        allowHalf: { type: "boolean", default: false, label: "Allow Half Stars" },
+      },
+    },
+  },
+  "data-display": {
+    "data-table": {
+      name: "Data Table",
+      icon: Layers,
+      category: "Data Display",
+      description: "Sortable, filterable data table",
+      properties: {
+        showSearch: { type: "boolean", default: true, label: "Show Search" },
+        showPagination: { type: "boolean", default: true, label: "Show Pagination" },
+        pageSize: { type: "number", default: 10, label: "Page Size", min: 5, max: 100 },
+        striped: { type: "boolean", default: false, label: "Striped Rows" },
+        bordered: { type: "boolean", default: true, label: "Bordered" },
+        sortable: { type: "boolean", default: true, label: "Sortable" },
+        selectable: { type: "boolean", default: false, label: "Row Selection" },
+      },
+    },
+    "list": {
+      name: "List",
+      icon: List,
+      category: "Data Display",
+      description: "Item list display",
+      properties: {
+        layout: { type: "select", default: "vertical", label: "Layout", options: ["vertical", "horizontal"] },
+        bordered: { type: "boolean", default: false, label: "Bordered" },
+        striped: { type: "boolean", default: false, label: "Striped" },
+        size: { type: "select", default: "medium", label: "Size", options: ["small", "medium", "large"] },
+      },
+    },
+    "card": {
+      name: "Card",
+      icon: CreditCard,
+      category: "Data Display",
+      description: "Content card container",
+      properties: {
+        title: { type: "text", default: "Card Title", label: "Title" },
+        showHeader: { type: "boolean", default: true, label: "Show Header" },
+        showFooter: { type: "boolean", default: false, label: "Show Footer" },
+        bordered: { type: "boolean", default: true, label: "Bordered" },
+        shadow: { type: "select", default: "sm", label: "Shadow", options: ["none", "sm", "md", "lg"] },
+        hoverable: { type: "boolean", default: false, label: "Hoverable" },
+      },
+    },
+    "badge": {
+      name: "Badge",
+      icon: Badge,
+      category: "Data Display",
+      description: "Status badge",
+      properties: {
+        text: { type: "text", default: "Badge", label: "Badge Text" },
+        variant: { type: "select", default: "default", label: "Variant", options: ["default", "primary", "success", "warning", "danger", "info"] },
+        size: { type: "select", default: "medium", label: "Size", options: ["small", "medium", "large"] },
+        dot: { type: "boolean", default: false, label: "Dot Style" },
+      },
+    },
+    "tag": {
+      name: "Tag",
+      icon: Tag,
+      category: "Data Display",
+      description: "Tag/label display",
+      properties: {
+        text: { type: "text", default: "Tag", label: "Tag Text" },
+        color: { type: "color", default: "#3b82f6", label: "Color" },
+        closable: { type: "boolean", default: false, label: "Closable" },
+        size: { type: "select", default: "medium", label: "Size", options: ["small", "medium", "large"] },
+      },
+    },
+    "metric-card": {
+      name: "Metric Card",
+      icon: TrendingUp,
+      category: "Data Display",
+      description: "Display key metrics",
+      properties: {
+        title: { type: "text", default: "Metric", label: "Title" },
+        value: { type: "text", default: "1,234", label: "Value" },
+        showIcon: { type: "boolean", default: true, label: "Show Icon" },
+        showTrend: { type: "boolean", default: false, label: "Show Trend" },
+        backgroundColor: { type: "color", default: "#ffffff", label: "Background" },
+        borderColor: { type: "color", default: "#e5e7eb", label: "Border" },
+      },
+    },
+    "stat-card": {
+      name: "Stat Card",
+      icon: BarChart3,
+      category: "Data Display",
+      description: "Statistics card with icon",
+      properties: {
+        title: { type: "text", default: "Total", label: "Title" },
+        value: { type: "text", default: "0", label: "Value" },
+        change: { type: "text", default: "+12%", label: "Change" },
+        icon: { type: "text", default: "TrendingUp", label: "Icon Name" },
+        trend: { type: "select", default: "up", label: "Trend", options: ["up", "down", "neutral"] },
+      },
+    },
+    "timeline": {
+      name: "Timeline",
+      icon: Clock,
+      category: "Data Display",
+      description: "Timeline/activity feed",
+      properties: {
+        mode: { type: "select", default: "left", label: "Mode", options: ["left", "right", "alternate"] },
+        showTime: { type: "boolean", default: true, label: "Show Time" },
+        pending: { type: "boolean", default: false, label: "Show Pending" },
+      },
+    },
+  },
+  "charts-graphs": {
+    "bar-chart": {
+      name: "Bar Chart",
+      icon: BarChart3,
+      category: "Charts & Graphs",
+      description: "Bar chart visualization",
+      properties: {
+        title: { type: "text", default: "Bar Chart", label: "Chart Title" },
+        showLegend: { type: "boolean", default: true, label: "Show Legend" },
+        showGrid: { type: "boolean", default: true, label: "Show Grid" },
+        height: { type: "number", default: 300, label: "Height", min: 200, max: 800 },
+        stacked: { type: "boolean", default: false, label: "Stacked Bars" },
+        horizontal: { type: "boolean", default: false, label: "Horizontal" },
+      },
+    },
+    "line-chart": {
+      name: "Line Chart",
+      icon: LineChart,
+      category: "Charts & Graphs",
+      description: "Line chart visualization",
+      properties: {
+        title: { type: "text", default: "Line Chart", label: "Chart Title" },
+        showLegend: { type: "boolean", default: true, label: "Show Legend" },
+        showGrid: { type: "boolean", default: true, label: "Show Grid" },
+        height: { type: "number", default: 300, label: "Height", min: 200, max: 800 },
+        smooth: { type: "boolean", default: false, label: "Smooth Lines" },
+        showPoints: { type: "boolean", default: true, label: "Show Data Points" },
+      },
+    },
+    "pie-chart": {
+      name: "Pie Chart",
+      icon: PieChart,
+      category: "Charts & Graphs",
+      description: "Pie chart visualization",
+      properties: {
+        title: { type: "text", default: "Pie Chart", label: "Chart Title" },
+        showLegend: { type: "boolean", default: true, label: "Show Legend" },
+        height: { type: "number", default: 300, label: "Height", min: 200, max: 800 },
+        donut: { type: "boolean", default: false, label: "Donut Style" },
+        showLabels: { type: "boolean", default: true, label: "Show Labels" },
+      },
+    },
+    "area-chart": {
+      name: "Area Chart",
+      icon: TrendingUp,
+      category: "Charts & Graphs",
+      description: "Area chart visualization",
+      properties: {
+        title: { type: "text", default: "Area Chart", label: "Chart Title" },
+        showLegend: { type: "boolean", default: true, label: "Show Legend" },
+        showGrid: { type: "boolean", default: true, label: "Show Grid" },
+        height: { type: "number", default: 300, label: "Height", min: 200, max: 800 },
+        stacked: { type: "boolean", default: false, label: "Stacked Areas" },
+      },
+    },
+    "gauge": {
+      name: "Gauge",
+      icon: Circle,
+      category: "Charts & Graphs",
+      description: "Gauge/speedometer chart",
+      properties: {
+        title: { type: "text", default: "Gauge", label: "Chart Title" },
+        min: { type: "number", default: 0, label: "Min Value" },
+        max: { type: "number", default: 100, label: "Max Value" },
+        value: { type: "number", default: 50, label: "Current Value" },
+        height: { type: "number", default: 200, label: "Height", min: 150, max: 400 },
+      },
+    },
+    "heatmap": {
+      name: "Heatmap",
+      icon: Grid,
+      category: "Charts & Graphs",
+      description: "Heatmap visualization",
+      properties: {
+        title: { type: "text", default: "Heatmap", label: "Chart Title" },
+        showLegend: { type: "boolean", default: true, label: "Show Legend" },
+        height: { type: "number", default: 300, label: "Height", min: 200, max: 800 },
+      },
+    },
+  },
+  "navigation": {
+    "tabs": {
+      name: "Tabs",
+      icon: Layers,
+      category: "Navigation",
+      description: "Tab navigation",
+      properties: {
+        tabs: { type: "text", default: "Tab 1, Tab 2, Tab 3", label: "Tab Labels (comma-separated)" },
+        defaultTab: { type: "text", default: "Tab 1", label: "Default Tab" },
+        position: { type: "select", default: "top", label: "Position", options: ["top", "bottom", "left", "right"] },
+        size: { type: "select", default: "medium", label: "Size", options: ["small", "medium", "large"] },
+        type: { type: "select", default: "line", label: "Type", options: ["line", "card", "button"] },
+      },
+    },
+    "breadcrumbs": {
+      name: "Breadcrumbs",
+      icon: ChevronRight,
+      category: "Navigation",
+      description: "Breadcrumb navigation",
+      properties: {
+        items: { type: "text", default: "Home, Products, Item", label: "Items (comma-separated)" },
+        separator: { type: "select", default: "/", label: "Separator", options: ["/", ">", "•", "→"] },
+      },
+    },
+    "pagination": {
+      name: "Pagination",
+      icon: ChevronLeft,
+      category: "Navigation",
+      description: "Page navigation",
+      properties: {
+        total: { type: "number", default: 100, label: "Total Items", min: 1 },
+        pageSize: { type: "number", default: 10, label: "Page Size", min: 5, max: 100 },
+        currentPage: { type: "number", default: 1, label: "Current Page", min: 1 },
+        showSizeChanger: { type: "boolean", default: false, label: "Show Size Changer" },
+        showQuickJumper: { type: "boolean", default: false, label: "Show Quick Jumper" },
+      },
+    },
+    "menu": {
+      name: "Menu",
+      icon: Menu,
+      category: "Navigation",
+      description: "Navigation menu",
+      properties: {
+        mode: { type: "select", default: "vertical", label: "Mode", options: ["vertical", "horizontal", "inline"] },
+        theme: { type: "select", default: "light", label: "Theme", options: ["light", "dark"] },
+        collapsed: { type: "boolean", default: false, label: "Collapsed" },
+      },
+    },
+    "steps": {
+      name: "Steps",
+      icon: CheckCircle,
+      category: "Navigation",
+      description: "Step indicator",
+      properties: {
+        steps: { type: "text", default: "Step 1, Step 2, Step 3", label: "Steps (comma-separated)" },
+        current: { type: "number", default: 0, label: "Current Step", min: 0 },
+        direction: { type: "select", default: "horizontal", label: "Direction", options: ["horizontal", "vertical"] },
+        size: { type: "select", default: "default", label: "Size", options: ["default", "small"] },
+      },
+    },
+  },
+  "feedback": {
+    "alert": {
+      name: "Alert",
+      icon: AlertCircle,
+      category: "Feedback",
+      description: "Alert message",
+      properties: {
+        message: { type: "text", default: "This is an alert message", label: "Message" },
+        type: { type: "select", default: "info", label: "Type", options: ["success", "info", "warning", "error"] },
+        showIcon: { type: "boolean", default: true, label: "Show Icon" },
+        closable: { type: "boolean", default: false, label: "Closable" },
+        banner: { type: "boolean", default: false, label: "Banner Style" },
+      },
+    },
+    "progress-bar": {
+      name: "Progress Bar",
+      icon: Loader2,
+      category: "Feedback",
+      description: "Progress indicator",
+      properties: {
+        percent: { type: "number", default: 50, label: "Progress (%)", min: 0, max: 100 },
+        showInfo: { type: "boolean", default: true, label: "Show Percentage" },
+        status: { type: "select", default: "active", label: "Status", options: ["active", "success", "exception", "normal"] },
+        strokeWidth: { type: "number", default: 8, label: "Stroke Width", min: 2, max: 20 },
+        strokeColor: { type: "color", default: "#1890ff", label: "Stroke Color" },
+      },
+    },
+    "spinner": {
+      name: "Spinner",
+      icon: Loader2,
+      category: "Feedback",
+      description: "Loading spinner",
+      properties: {
+        size: { type: "select", default: "medium", label: "Size", options: ["small", "medium", "large"] },
+        tip: { type: "text", default: "", label: "Loading Text" },
+        delay: { type: "number", default: 0, label: "Delay (ms)", min: 0 },
+      },
+    },
+    "skeleton": {
+      name: "Skeleton",
+      icon: Square,
+      category: "Feedback",
+      description: "Loading skeleton",
+      properties: {
+        active: { type: "boolean", default: true, label: "Animated" },
+        rows: { type: "number", default: 3, label: "Rows", min: 1, max: 10 },
+        paragraph: { type: "boolean", default: true, label: "Show Paragraph" },
+      },
+    },
+    "toast": {
+      name: "Toast",
+      icon: Bell,
+      category: "Feedback",
+      description: "Toast notification",
+      properties: {
+        message: { type: "text", default: "Toast message", label: "Message" },
+        type: { type: "select", default: "info", label: "Type", options: ["success", "info", "warning", "error"] },
+        duration: { type: "number", default: 3000, label: "Duration (ms)", min: 1000 },
+        position: { type: "select", default: "topRight", label: "Position", options: ["topLeft", "topRight", "bottomLeft", "bottomRight", "top", "bottom"] },
+      },
+    },
+    "modal": {
+      name: "Modal",
+      icon: Maximize2,
+      category: "Feedback",
+      description: "Modal dialog",
+      properties: {
+        title: { type: "text", default: "Modal Title", label: "Title" },
+        visible: { type: "boolean", default: false, label: "Visible" },
+        width: { type: "number", default: 520, label: "Width", min: 200, max: 1200 },
+        closable: { type: "boolean", default: true, label: "Closable" },
+        maskClosable: { type: "boolean", default: true, label: "Close on Mask Click" },
+        centered: { type: "boolean", default: false, label: "Centered" },
+      },
+    },
+    "drawer": {
+      name: "Drawer",
+      icon: Sidebar,
+      category: "Feedback",
+      description: "Side drawer",
+      properties: {
+        title: { type: "text", default: "Drawer Title", label: "Title" },
+        visible: { type: "boolean", default: false, label: "Visible" },
+        placement: { type: "select", default: "right", label: "Placement", options: ["top", "right", "bottom", "left"] },
+        width: { type: "number", default: 378, label: "Width", min: 200, max: 800 },
+        closable: { type: "boolean", default: true, label: "Closable" },
+      },
+    },
+    "notification": {
+      name: "Notification",
+      icon: Bell,
+      category: "Feedback",
+      description: "Notification badge",
+      properties: {
+        count: { type: "number", default: 0, label: "Count", min: 0 },
+        showZero: { type: "boolean", default: false, label: "Show Zero" },
+        overflowCount: { type: "number", default: 99, label: "Overflow Count", min: 1 },
+        dot: { type: "boolean", default: false, label: "Dot Style" },
+      },
+    },
+  },
+  "advanced": {
+    "splitter": {
+      name: "Splitter",
+      icon: GripVertical,
+      category: "Advanced",
+      description: "Resizable split panel",
+      properties: {
+        direction: { type: "select", default: "horizontal", label: "Direction", options: ["horizontal", "vertical"] },
+        split: { type: "number", default: 50, label: "Split (%)", min: 0, max: 100 },
+        minSize: { type: "number", default: 10, label: "Min Size (%)", min: 0, max: 50 },
+        maxSize: { type: "number", default: 90, label: "Max Size (%)", min: 50, max: 100 },
+        resizable: { type: "boolean", default: true, label: "Resizable" },
+      },
+    },
+    "resizer": {
+      name: "Resizer",
+      icon: GripHorizontal,
+      category: "Advanced",
+      description: "Resizable container",
+      properties: {
+        direction: { type: "select", default: "both", label: "Direction", options: ["horizontal", "vertical", "both"] },
+        minWidth: { type: "number", default: 100, label: "Min Width (px)", min: 50 },
+        minHeight: { type: "number", default: 100, label: "Min Height (px)", min: 50 },
+        maxWidth: { type: "number", default: null, label: "Max Width (px)" },
+        maxHeight: { type: "number", default: null, label: "Max Height (px)" },
+      },
+    },
+    "accordion": {
+      name: "Accordion",
+      icon: ChevronDown,
+      category: "Advanced",
+      description: "Collapsible accordion",
+      properties: {
+        items: { type: "text", default: "Item 1, Item 2, Item 3", label: "Items (comma-separated)" },
+        defaultActiveKey: { type: "text", default: "", label: "Default Active" },
+        accordion: { type: "boolean", default: true, label: "Only One Open" },
+        bordered: { type: "boolean", default: true, label: "Bordered" },
+      },
+    },
+    "carousel": {
+      name: "Carousel",
+      icon: ArrowRight,
+      category: "Advanced",
+      description: "Image/content carousel",
+      properties: {
+        autoplay: { type: "boolean", default: false, label: "Autoplay" },
+        dots: { type: "boolean", default: true, label: "Show Dots" },
+        arrows: { type: "boolean", default: true, label: "Show Arrows" },
+        effect: { type: "select", default: "scroll", label: "Effect", options: ["scroll", "fade", "slide"] },
+        speed: { type: "number", default: 500, label: "Speed (ms)", min: 100, max: 2000 },
+      },
+    },
+    "tabs-advanced": {
+      name: "Advanced Tabs",
+      icon: Layers,
+      category: "Advanced",
+      description: "Tabs with add/remove",
+      properties: {
+        editable: { type: "boolean", default: false, label: "Editable" },
+        addable: { type: "boolean", default: false, label: "Addable" },
+        closable: { type: "boolean", default: false, label: "Closable" },
+        type: { type: "select", default: "line", label: "Type", options: ["line", "card", "editable-card"] },
+      },
+    },
+    "tree": {
+      name: "Tree",
+      icon: Folder,
+      category: "Advanced",
+      description: "Tree structure",
+      properties: {
+        checkable: { type: "boolean", default: false, label: "Checkable" },
+        defaultExpandAll: { type: "boolean", default: false, label: "Expand All" },
+        showLine: { type: "boolean", default: false, label: "Show Line" },
+        draggable: { type: "boolean", default: false, label: "Draggable" },
+      },
+    },
+    "transfer": {
+      name: "Transfer",
+      icon: ArrowRight,
+      category: "Advanced",
+      description: "Transfer list",
+      properties: {
+        titles: { type: "text", default: "Source, Target", label: "Titles (comma-separated)" },
+        showSearch: { type: "boolean", default: false, label: "Show Search" },
+        operations: { type: "text", default: ">, <", label: "Operations" },
+      },
+    },
+    "timeline-advanced": {
+      name: "Advanced Timeline",
+      icon: Clock,
+      category: "Advanced",
+      description: "Timeline with custom content",
+      properties: {
+        mode: { type: "select", default: "left", label: "Mode", options: ["left", "right", "alternate"] },
+        reverse: { type: "boolean", default: false, label: "Reverse" },
+        pending: { type: "text", default: "", label: "Pending Text" },
+      },
+    },
+  },
+  platform: {
+    "sop-reasoning-card": {
+      name: "SOP Reasoning Card",
+      icon: Brain,
+      category: "Platform (SOP Executor)",
+      description: "AI reasoning card with SOP matching",
+      platform: "sop-executor",
+      properties: {
+        showConfidence: { type: "boolean", default: true, label: "Show Confidence" },
+        showSOPReferences: { type: "boolean", default: true, label: "Show SOP References" },
+        compact: { type: "boolean", default: false, label: "Compact Mode" },
+      },
+    },
+    "sop-viewer": {
+      name: "SOP Viewer",
+      icon: Layers,
+      category: "Platform (SOP Executor)",
+      description: "Document viewer for SOPs",
+      platform: "sop-executor",
+      properties: {
+        showNavigation: { type: "boolean", default: true, label: "Show Navigation" },
+        showSearch: { type: "boolean", default: true, label: "Show Search" },
+        defaultZoom: { type: "number", default: 100, label: "Default Zoom", min: 50, max: 200 },
+      },
+    },
+    "work-order-card": {
+      name: "Work Order Card",
+      icon: Zap,
+      category: "Platform (Field Service)",
+      description: "Field service work order display",
+      platform: "field-service",
+      properties: {
+        showStatus: { type: "boolean", default: true, label: "Show Status" },
+        showPriority: { type: "boolean", default: true, label: "Show Priority" },
+        showTechnician: { type: "boolean", default: true, label: "Show Technician" },
+      },
+    },
+    "asset-card": {
+      name: "Asset Card",
+      icon: Database,
+      category: "Platform (Field Service)",
+      description: "Asset information card",
+      platform: "field-service",
+      properties: {
+        showHealth: { type: "boolean", default: true, label: "Show Health Score" },
+        showLocation: { type: "boolean", default: true, label: "Show Location" },
+        showMaintenance: { type: "boolean", default: true, label: "Show Maintenance History" },
+      },
+    },
+  },
+};
+
+// AI App Generator - Simulates AI-powered app creation
+async function generateAppFromDescription(description, basicInfo) {
+  // Simulate AI processing with progress updates
+  const steps = [
+    { label: "Analyzing requirements...", progress: 10 },
+    { label: "Designing data model...", progress: 30 },
+    { label: "Generating components...", progress: 50 },
+    { label: "Configuring platform integration...", progress: 70 },
+    { label: "Setting up AI Watchtower...", progress: 85 },
+    { label: "Finalizing app structure...", progress: 100 },
+  ];
+
+  // Simulate progress
+  for (const step of steps) {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    if (step.progress === 100) break;
+  }
+
+  // Generate app structure based on description
+  const entities = [];
+  const components = [];
+
+  // Simple AI logic: extract entities and components from description
+  if (description.toLowerCase().includes("claim") || description.toLowerCase().includes("case")) {
+    entities.push({
+      id: `entity-${Date.now()}`,
+      name: "Claim",
+      fields: [
+        { name: "id", type: "string", required: true },
+        { name: "amount", type: "number", required: true },
+        { name: "status", type: "string", required: true },
+        { name: "date", type: "date", required: true },
+      ],
+    });
+    components.push({
+      id: `comp-${Date.now()}`,
+      type: "data-table",
+      name: "Claims Table",
+      props: {},
+      dataBinding: "Claim",
+    });
+  }
+
+  if (description.toLowerCase().includes("sop") || basicInfo.platform === "sop-navigator") {
+    components.push({
+      id: `comp-${Date.now() + 1}`,
+      type: "sop-reasoning-card",
+      name: "AI Reasoning",
+      props: {},
+      dataBinding: null,
+    });
+  }
+
+  return {
+    entities,
+    components,
+  };
+}
+
+// Droppable Canvas Component
+function DroppableCanvas({ children, onDrop }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: "canvas",
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`min-h-full bg-white rounded-xl border-2 border-dashed p-6 transition-colors ${
+        isOver ? "border-[#612D91] bg-indigo-50" : "border-gray-300"
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+export default function AppBuilder({ app: existingApp, onClose, onSave }) {
+  const [mode, setMode] = useState(existingApp ? "builder" : "welcome"); // "welcome", "ai-create", "builder"
+  const [step, setStep] = useState(1); // For builder mode: 1: Data Model, 2: Build UI
+  const [appData, setAppData] = useState(() => {
+    if (existingApp) {
+      return {
+        id: existingApp.id,
+        name: existingApp.name,
+        tagline: existingApp.tagline,
+        description: existingApp.description,
+        industry: existingApp.industry,
+        platform: existingApp.platformId || "sop-navigator",
+        platformName: existingApp.platformName || "SOP Executor",
+        dataModel: existingApp.dataModel || { entities: [] },
+        pages: existingApp.pages || [{ name: "Home", components: [] }],
+        status: existingApp.status || "Workspace",
+      };
+    }
+    return {
+      id: `app-${Date.now()}`,
+      name: "",
+      tagline: "",
+      description: "",
+      industry: "Cross-Industry",
+      platform: "sop-navigator",
+      platformName: "SOP Executor",
+      dataModel: { entities: [] },
+      pages: [{ name: "Home", components: [] }],
+      status: "Workspace",
+    };
+  });
+
+  const [basicInfo, setBasicInfo] = useState({
+    name: appData.name,
+    tagline: appData.tagline,
+    description: appData.description,
+    industry: appData.industry,
+    platform: appData.platform,
+    platformName: appData.platformName,
+  });
+
+  const [selectedComponent, setSelectedComponent] = useState(null);
+  const [editingEntity, setEditingEntity] = useState(null);
+  const [activePage, setActivePage] = useState(0);
+  const [viewMode, setViewMode] = useState("canvas"); // "canvas", "preview", "split"
+  const [responsiveMode, setResponsiveMode] = useState("desktop"); // "desktop", "tablet", "mobile"
+  const [componentSearch, setComponentSearch] = useState("");
+  const [aiDescription, setAiDescription] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState({ label: "", progress: 0 });
+  const [expandedCategories, setExpandedCategories] = useState({
+    layout: true,
+    "form-controls": true,
+    "data-display": true,
+    "charts-graphs": true,
+    navigation: true,
+    feedback: true,
+    advanced: true,
+    platform: true,
+    templates: true,
+  });
+  const [showCodeGenerator, setShowCodeGenerator] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor)
+  );
+
+  const [draggedComponent, setDraggedComponent] = useState(null);
+
+  const handleDragStart = (event) => {
+    setDraggedComponent(event.active.id);
+  };
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    setDraggedComponent(null);
+
+    if (!over || over.id !== "canvas") return;
+
+    const componentType = active.id;
+    const componentDef = Object.values(COMPONENT_LIBRARY)
+      .flatMap((cat) => Object.entries(cat))
+      .find(([key]) => key === componentType)?.[1];
+
+    if (componentDef) {
+      const newComponent = {
+        id: `comp-${Date.now()}`,
+        type: componentType,
+        name: componentDef.name,
+        props: {},
+        dataBinding: null,
+      };
+
+      const updatedPages = [...appData.pages];
+      updatedPages[activePage].components.push(newComponent);
+      setAppData({ ...appData, pages: updatedPages });
+    }
+  };
+
+  const handleSave = () => {
+    const finalAppData = {
+      ...appData,
+      ...basicInfo,
+      platformId: basicInfo.platform,
+    };
+    onSave?.(finalAppData);
+    setIsSaved(true);
+  };
+
+  const handlePublish = () => {
+    const finalAppData = {
+      ...appData,
+      ...basicInfo,
+      platformId: basicInfo.platform,
+      status: "Published",
+      publishedAt: new Date().toISOString(),
+      launchKey: `custom-${appData.id}`,
+    };
+    onSave?.(finalAppData);
+  };
+
+  const handleAICreate = async () => {
+    if (!aiDescription.trim()) return;
+
+    setIsGenerating(true);
+    setGenerationProgress({ label: "Starting...", progress: 0 });
+
+    try {
+      // Simulate AI generation with progress updates
+      const steps = [
+        { label: "Analyzing requirements...", progress: 10 },
+        { label: "Designing data model...", progress: 30 },
+        { label: "Generating components...", progress: 50 },
+        { label: "Configuring platform integration...", progress: 70 },
+        { label: "Setting up AI Watchtower...", progress: 85 },
+        { label: "Finalizing app structure...", progress: 100 },
+      ];
+
+      for (const step of steps) {
+        setGenerationProgress(step);
+        await new Promise((resolve) => setTimeout(resolve, 800));
+      }
+
+      // Generate app structure
+      const generated = await generateAppFromDescription(aiDescription, basicInfo);
+
+      // Update app data with generated structure
+      setAppData({
+        ...appData,
+        dataModel: { entities: generated.entities },
+        pages: [{ name: "Home", components: generated.components }],
+      });
+
+      setIsGenerating(false);
+      setMode("builder");
+      setStep(2); // Go to build UI step
+    } catch (error) {
+      console.error("AI generation error:", error);
+      setIsGenerating(false);
+    }
+  };
+
+  const toggleCategory = (category) => {
+    setExpandedCategories((prev) => ({
+      ...prev,
+      [category]: !prev[category],
+    }));
+  };
+
+  // Welcome Screen
+  if (mode === "welcome") {
+    return (
+      <div className="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl"
+        >
+          <div className="p-8 space-y-6">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-[#612D91] to-[#A64AC9] mb-4">
+                <Wand2 className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Create New Application</h2>
+              <p className="text-gray-600">Choose how you'd like to build your app</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button
+                onClick={() => setMode("ai-create")}
+                className="p-6 rounded-xl border-2 border-[#612D91] bg-gradient-to-br from-indigo-50 to-purple-50 hover:shadow-lg transition-all text-left"
+              >
+                <Sparkles className="w-6 h-6 text-[#612D91] mb-3" />
+                <h3 className="font-semibold text-gray-900 mb-2">AI-Powered Creation</h3>
+                <p className="text-sm text-gray-600">
+                  Describe your app and let AI generate it automatically
+                </p>
+              </button>
+
+              <button
+                onClick={() => {
+                  // First capture basic info
+                  setMode("basic-info");
+                }}
+                className="p-6 rounded-xl border-2 border-gray-200 hover:border-[#612D91] hover:shadow-lg transition-all text-left"
+              >
+                <Layers className="w-6 h-6 text-gray-600 mb-3" />
+                <h3 className="font-semibold text-gray-900 mb-2">Manual Builder</h3>
+                <p className="text-sm text-gray-600">
+                  Build your app step by step with full control
+                </p>
+              </button>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Basic Info Screen (before builder)
+  if (mode === "basic-info") {
+    return (
+      <div className="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl"
+        >
+          <div className="p-8 space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Basic Information</h2>
+              <p className="text-gray-600">Tell us about your application</p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">App Name *</label>
+                <input
+                  type="text"
+                  value={basicInfo.name}
+                  onChange={(e) => setBasicInfo({ ...basicInfo, name: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+                  placeholder="My Custom App"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tagline</label>
+                <input
+                  type="text"
+                  value={basicInfo.tagline}
+                  onChange={(e) => setBasicInfo({ ...basicInfo, tagline: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+                  placeholder="AI-powered solution"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  value={basicInfo.description}
+                  onChange={(e) => setBasicInfo({ ...basicInfo, description: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+                  rows={3}
+                  placeholder="Describe what your app does..."
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Platform</label>
+                  <select
+                    value={basicInfo.platform}
+                    onChange={(e) => {
+                      const platformMap = {
+                        "sop-navigator": "SOP Executor",
+                        "field-service": "Field Service Platform",
+                      };
+                      setBasicInfo({
+                        ...basicInfo,
+                        platform: e.target.value,
+                        platformName: platformMap[e.target.value] || "SOP Executor",
+                      });
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+                  >
+                    <option value="sop-navigator">SOP Executor</option>
+                    <option value="field-service">Field Service Platform</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Industry</label>
+                  <select
+                    value={basicInfo.industry}
+                    onChange={(e) => setBasicInfo({ ...basicInfo, industry: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+                  >
+                    <option value="Cross-Industry">Cross-Industry</option>
+                    <option value="Healthcare">Healthcare</option>
+                    <option value="Financial Services">Financial Services</option>
+                    <option value="Manufacturing">Manufacturing</option>
+                    <option value="Retail">Retail</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setMode("welcome")}
+                className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+              >
+                Back
+              </button>
+              <button
+                onClick={() => {
+                  setAppData({ ...appData, ...basicInfo });
+                  setMode("builder");
+                }}
+                disabled={!basicInfo.name}
+                className="px-6 py-2 rounded-lg bg-gradient-to-r from-[#612D91] to-[#A64AC9] text-white font-medium hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Continue to Builder
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // AI Creation Screen
+  if (mode === "ai-create") {
+    return (
+      <div className="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl"
+        >
+          <div className="p-8 space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">AI-Powered App Creation</h2>
+              <p className="text-gray-600">Describe your app and we'll build it for you</p>
+            </div>
+
+            {!isGenerating ? (
+              <>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Basic Information</label>
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <input
+                        type="text"
+                        value={basicInfo.name}
+                        onChange={(e) => setBasicInfo({ ...basicInfo, name: e.target.value })}
+                        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+                        placeholder="App Name"
+                      />
+                      <select
+                        value={basicInfo.platform}
+                        onChange={(e) => {
+                          const platformMap = {
+                            "sop-navigator": "SOP Executor",
+                            "field-service": "Field Service Platform",
+                          };
+                          setBasicInfo({
+                            ...basicInfo,
+                            platform: e.target.value,
+                            platformName: platformMap[e.target.value] || "SOP Executor",
+                          });
+                        }}
+                        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+                      >
+                        <option value="sop-navigator">SOP Executor</option>
+                        <option value="field-service">Field Service Platform</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Describe your app in detail
+                    </label>
+                    <textarea
+                      value={aiDescription}
+                      onChange={(e) => setAiDescription(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#612D91] focus:border-transparent min-h-[200px]"
+                      placeholder="Example: I need an app to manage healthcare claims. It should have a table to view all claims, show claim details, and use AI to analyze each claim against SOP guidelines..."
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Be as detailed as possible. Include entities, features, and any specific requirements.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setMode("welcome")}
+                    className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={handleAICreate}
+                    disabled={!aiDescription.trim() || !basicInfo.name}
+                    className="px-6 py-2 rounded-lg bg-gradient-to-r from-[#612D91] to-[#A64AC9] text-white font-medium hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Generate App
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-4">
+                <div className="text-center py-8">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-[#612D91] to-[#A64AC9] mb-4 animate-pulse">
+                    <Sparkles className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    {generationProgress.label}
+                  </h3>
+                  <div className="w-full bg-gray-200 rounded-full h-3 max-w-md mx-auto">
+                    <motion.div
+                      className="bg-gradient-to-r from-[#612D91] to-[#A64AC9] h-3 rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${generationProgress.progress}%` }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </div>
+                  <p className="text-sm text-gray-600 mt-2">{generationProgress.progress}%</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Main Builder
+  return (
+    <div className="fixed inset-0 bg-gray-900 z-50 flex flex-col">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-[#612D91] to-[#A64AC9]">
+            <Wand2 className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">AI App Builder</h2>
+            <p className="text-xs text-gray-600">
+              {appData.name || basicInfo.name || "New Application"} • {basicInfo.platformName || appData.platformName}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Responsive Controls */}
+          <div className="flex items-center gap-1 border border-gray-200 rounded-lg p-1">
+            <button
+              onClick={() => setResponsiveMode("desktop")}
+              className={`p-1.5 rounded transition-colors ${
+                responsiveMode === "desktop" ? "bg-[#612D91] text-white" : "text-gray-600 hover:bg-gray-100"
+              }`}
+              title="Desktop"
+            >
+              <Monitor className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setResponsiveMode("tablet")}
+              className={`p-1.5 rounded transition-colors ${
+                responsiveMode === "tablet" ? "bg-[#612D91] text-white" : "text-gray-600 hover:bg-gray-100"
+              }`}
+              title="Tablet"
+            >
+              <Tablet className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setResponsiveMode("mobile")}
+              className={`p-1.5 rounded transition-colors ${
+                responsiveMode === "mobile" ? "bg-[#612D91] text-white" : "text-gray-600 hover:bg-gray-100"
+              }`}
+              title="Mobile"
+            >
+              <Smartphone className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* View Mode Controls */}
+          <div className="flex items-center gap-1 border border-gray-200 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode("canvas")}
+              className={`p-1.5 rounded transition-colors ${
+                viewMode === "canvas" ? "bg-[#612D91] text-white" : "text-gray-600 hover:bg-gray-100"
+              }`}
+              title="Canvas Only"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("split")}
+              className={`p-1.5 rounded transition-colors ${
+                viewMode === "split" ? "bg-[#612D91] text-white" : "text-gray-600 hover:bg-gray-100"
+              }`}
+              title="Split View"
+            >
+              <Split className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("preview")}
+              className={`p-1.5 rounded transition-colors ${
+                viewMode === "preview" ? "bg-[#612D91] text-white" : "text-gray-600 hover:bg-gray-100"
+              }`}
+              title="Preview Only"
+            >
+              <Eye className="w-4 h-4" />
+            </button>
+          </div>
+          <button
+            onClick={handleSave}
+            className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors flex items-center gap-2"
+          >
+            <Save className="w-4 h-4" />
+            Save
+          </button>
+          <button
+            onClick={() => setShowCodeGenerator(true)}
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#612D91] to-[#A64AC9] text-white hover:shadow-lg transition-all flex items-center gap-2"
+          >
+            <Code className="w-4 h-4" />
+            Generate & Deploy
+          </button>
+          {isSaved && (
+            <button
+              onClick={handlePublish}
+              className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-all flex items-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              Publish to Store
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-600" />
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Sidebar - Component Library & Data Model */}
+        <div className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
+          <div className="p-4 space-y-4">
+            {/* Data Model Section */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                  <Database className="w-4 h-4 text-[#612D91]" />
+                  Data Model
+                </h3>
+                <button
+                  onClick={() => {
+                    const newEntity = {
+                      id: `entity-${Date.now()}`,
+                      name: "NewEntity",
+                      fields: [
+                        { name: "id", type: "string", required: true },
+                        { name: "name", type: "string", required: true },
+                      ],
+                    };
+                    setAppData({
+                      ...appData,
+                      dataModel: {
+                        entities: [...(appData.dataModel.entities || []), newEntity],
+                      },
+                    });
+                  }}
+                  className="p-1.5 rounded-lg bg-[#612D91] text-white hover:bg-[#5B2E90] transition-colors"
+                >
+                  <Plus className="w-3 h-3" />
+                </button>
+              </div>
+              <div className="space-y-2">
+                {appData.dataModel.entities?.map((entity, idx) => (
+                  <div
+                    key={entity.id || idx}
+                    className="p-2 rounded-lg border border-gray-200 text-xs hover:border-[#612D91] hover:bg-indigo-50 cursor-pointer transition-all"
+                    onClick={() => setEditingEntity(entity)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-gray-900">{entity.name}</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingEntity(entity);
+                          }}
+                          className="p-1 rounded hover:bg-gray-100"
+                          title="Edit"
+                        >
+                          <Edit className="w-3 h-3 text-gray-600" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const updated = appData.dataModel.entities.filter((_, i) => i !== idx);
+                            setAppData({
+                              ...appData,
+                              dataModel: { entities: updated },
+                            });
+                          }}
+                          className="p-1 rounded hover:bg-gray-100"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3 h-3 text-red-600" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="text-gray-500 mt-1">
+                      {entity.fields?.length || 0} fields
+                      {entity.relationships?.length > 0 && ` • ${entity.relationships.length} relationships`}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {(!appData.dataModel.entities || appData.dataModel.entities.length === 0) && (
+                <div className="text-center py-4 text-gray-400 text-xs">
+                  <Database className="w-6 h-6 mx-auto mb-2" />
+                  <p>No entities yet</p>
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-gray-200 pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-900">Component Library</h3>
+              </div>
+
+              {/* Component Search */}
+              <div className="mb-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={componentSearch}
+                    onChange={(e) => setComponentSearch(e.target.value)}
+                    placeholder="Search components..."
+                    className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Component Templates - Accordion */}
+              <div className="mb-3">
+                <button
+                  onClick={() => toggleCategory("templates")}
+                  className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Copy className="w-4 h-4 text-gray-600" />
+                    <span className="text-sm font-medium text-gray-900">Templates</span>
+                  </div>
+                  {expandedCategories.templates ? (
+                    <ChevronUp className="w-4 h-4 text-gray-600" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-gray-600" />
+                  )}
+                </button>
+                {expandedCategories.templates && (
+                  <div className="mt-2 space-y-1 pl-6">
+                    {Object.entries(COMPONENT_TEMPLATES)
+                      .filter(([key, template]) =>
+                        !componentSearch || template.name.toLowerCase().includes(componentSearch.toLowerCase())
+                      )
+                      .map(([key, template]) => {
+                        const Icon = template.icon;
+                        return (
+                          <div
+                            key={key}
+                            onClick={() => {
+                              // Add all template components to current page
+                              const newComponents = template.components.map((comp) => ({
+                                ...comp,
+                                id: `comp-${Date.now()}-${Math.random()}`,
+                              }));
+                              const updatedPages = [...appData.pages];
+                              updatedPages[activePage].components.push(...newComponents);
+                              setAppData({ ...appData, pages: updatedPages });
+                            }}
+                            className="p-2 rounded-lg border border-gray-200 hover:border-[#612D91] hover:bg-indigo-50 cursor-pointer transition-all"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Icon className="w-4 h-4 text-gray-600" />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-medium text-gray-900 truncate">{template.name}</div>
+                                <div className="text-[10px] text-gray-500 truncate">{template.description}</div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+
+              {/* Layout Components - Accordion */}
+              <div className="mb-3">
+                <button
+                  onClick={() => toggleCategory("layout")}
+                  className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Layout className="w-4 h-4 text-gray-600" />
+                    <span className="text-sm font-medium text-gray-900">Layout</span>
+                  </div>
+                  {expandedCategories.layout ? (
+                    <ChevronUp className="w-4 h-4 text-gray-600" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-gray-600" />
+                  )}
+                </button>
+                {expandedCategories.layout && (
+                  <div className="mt-2 space-y-1 pl-6">
+                    {Object.entries(COMPONENT_LIBRARY.layout)
+                      .filter(([key, comp]) =>
+                        !componentSearch || comp.name.toLowerCase().includes(componentSearch.toLowerCase())
+                      )
+                      .map(([key, comp]) => {
+                      const Icon = comp.icon;
+                      return (
+                        <div
+                          key={key}
+                          id={key}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.effectAllowed = "move";
+                            e.dataTransfer.setData("text/plain", key);
+                            setDraggedComponent(key);
+                          }}
+                          className="p-2 rounded-lg border border-gray-200 hover:border-[#612D91] hover:bg-indigo-50 cursor-move transition-all"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Icon className="w-4 h-4 text-gray-600" />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-medium text-gray-900 truncate">{comp.name}</div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Platform Components - Accordion */}
+              <div className="mb-3">
+                <button
+                  onClick={() => toggleCategory("platform")}
+                  className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Component className="w-4 h-4 text-gray-600" />
+                    <span className="text-sm font-medium text-gray-900">Platform Components</span>
+                  </div>
+                  {expandedCategories.platform ? (
+                    <ChevronUp className="w-4 h-4 text-gray-600" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-gray-600" />
+                  )}
+                </button>
+                {expandedCategories.platform && (
+                  <div className="mt-2 space-y-1 pl-6">
+                    {Object.entries(COMPONENT_LIBRARY.platform)
+                      .filter(([key, comp]) => {
+                        if (!componentSearch) return true;
+                        return comp.name.toLowerCase().includes(componentSearch.toLowerCase()) ||
+                               comp.description.toLowerCase().includes(componentSearch.toLowerCase());
+                      })
+                      .map(([key, comp]) => {
+                      const Icon = comp.icon;
+                      const isCompatible = !comp.platform || comp.platform === basicInfo.platform || comp.platform === appData.platform;
+                      return (
+                        <div
+                          key={key}
+                          id={key}
+                          draggable={isCompatible}
+                          onDragStart={(e) => {
+                            if (isCompatible) {
+                              e.dataTransfer.effectAllowed = "move";
+                              e.dataTransfer.setData("text/plain", key);
+                              setDraggedComponent(key);
+                            }
+                          }}
+                          className={`p-2 rounded-lg border cursor-move transition-all ${
+                            isCompatible
+                              ? "border-gray-200 hover:border-[#612D91] hover:bg-indigo-50"
+                              : "border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Icon className="w-4 h-4 text-gray-600" />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-medium text-gray-900 truncate">{comp.name}</div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Form Controls - Accordion */}
+              {COMPONENT_LIBRARY["form-controls"] && (
+                <div className="mb-3">
+                  <button
+                    onClick={() => toggleCategory("form-controls")}
+                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Settings className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm font-medium text-gray-900">Form Controls</span>
+                    </div>
+                    {expandedCategories["form-controls"] ? (
+                      <ChevronUp className="w-4 h-4 text-gray-600" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-gray-600" />
+                    )}
+                  </button>
+                  {expandedCategories["form-controls"] && (
+                    <div className="mt-2 space-y-1 pl-6">
+                      {Object.entries(COMPONENT_LIBRARY["form-controls"])
+                        .filter(([key, comp]) =>
+                          !componentSearch || comp.name.toLowerCase().includes(componentSearch.toLowerCase())
+                        )
+                        .map(([key, comp]) => {
+                          const Icon = comp.icon;
+                          return (
+                            <div
+                              key={key}
+                              id={key}
+                              draggable={true}
+                              onDragStart={(e) => {
+                                e.dataTransfer.effectAllowed = "move";
+                                e.dataTransfer.setData("text/plain", key);
+                                setDraggedComponent(key);
+                              }}
+                              className="p-2 rounded-lg border border-gray-200 hover:border-[#612D91] hover:bg-indigo-50 cursor-move transition-all"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Icon className="w-4 h-4 text-gray-600" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs font-medium text-gray-900 truncate">{comp.name}</div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Data Display - Accordion */}
+              {COMPONENT_LIBRARY["data-display"] && (
+                <div className="mb-3">
+                  <button
+                    onClick={() => toggleCategory("data-display")}
+                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm font-medium text-gray-900">Data Display</span>
+                    </div>
+                    {expandedCategories["data-display"] ? (
+                      <ChevronUp className="w-4 h-4 text-gray-600" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-gray-600" />
+                    )}
+                  </button>
+                  {expandedCategories["data-display"] && (
+                    <div className="mt-2 space-y-1 pl-6">
+                      {Object.entries(COMPONENT_LIBRARY["data-display"])
+                        .filter(([key, comp]) =>
+                          !componentSearch || comp.name.toLowerCase().includes(componentSearch.toLowerCase())
+                        )
+                        .map(([key, comp]) => {
+                          const Icon = comp.icon;
+                          return (
+                            <div
+                              key={key}
+                              id={key}
+                              draggable={true}
+                              onDragStart={(e) => {
+                                e.dataTransfer.effectAllowed = "move";
+                                e.dataTransfer.setData("text/plain", key);
+                                setDraggedComponent(key);
+                              }}
+                              className="p-2 rounded-lg border border-gray-200 hover:border-[#612D91] hover:bg-indigo-50 cursor-move transition-all"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Icon className="w-4 h-4 text-gray-600" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs font-medium text-gray-900 truncate">{comp.name}</div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Charts & Graphs - Accordion */}
+              {COMPONENT_LIBRARY["charts-graphs"] && (
+                <div className="mb-3">
+                  <button
+                    onClick={() => toggleCategory("charts-graphs")}
+                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm font-medium text-gray-900">Charts & Graphs</span>
+                    </div>
+                    {expandedCategories["charts-graphs"] ? (
+                      <ChevronUp className="w-4 h-4 text-gray-600" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-gray-600" />
+                    )}
+                  </button>
+                  {expandedCategories["charts-graphs"] && (
+                    <div className="mt-2 space-y-1 pl-6">
+                      {Object.entries(COMPONENT_LIBRARY["charts-graphs"])
+                        .filter(([key, comp]) =>
+                          !componentSearch || comp.name.toLowerCase().includes(componentSearch.toLowerCase())
+                        )
+                        .map(([key, comp]) => {
+                          const Icon = comp.icon;
+                          return (
+                            <div
+                              key={key}
+                              id={key}
+                              draggable={true}
+                              onDragStart={(e) => {
+                                e.dataTransfer.effectAllowed = "move";
+                                e.dataTransfer.setData("text/plain", key);
+                                setDraggedComponent(key);
+                              }}
+                              className="p-2 rounded-lg border border-gray-200 hover:border-[#612D91] hover:bg-indigo-50 cursor-move transition-all"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Icon className="w-4 h-4 text-gray-600" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs font-medium text-gray-900 truncate">{comp.name}</div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Navigation - Accordion */}
+              {COMPONENT_LIBRARY.navigation && (
+                <div className="mb-3">
+                  <button
+                    onClick={() => toggleCategory("navigation")}
+                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Menu className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm font-medium text-gray-900">Navigation</span>
+                    </div>
+                    {expandedCategories.navigation ? (
+                      <ChevronUp className="w-4 h-4 text-gray-600" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-gray-600" />
+                    )}
+                  </button>
+                  {expandedCategories.navigation && (
+                    <div className="mt-2 space-y-1 pl-6">
+                      {Object.entries(COMPONENT_LIBRARY.navigation)
+                        .filter(([key, comp]) =>
+                          !componentSearch || comp.name.toLowerCase().includes(componentSearch.toLowerCase())
+                        )
+                        .map(([key, comp]) => {
+                          const Icon = comp.icon;
+                          return (
+                            <div
+                              key={key}
+                              id={key}
+                              draggable={true}
+                              onDragStart={(e) => {
+                                e.dataTransfer.effectAllowed = "move";
+                                e.dataTransfer.setData("text/plain", key);
+                                setDraggedComponent(key);
+                              }}
+                              className="p-2 rounded-lg border border-gray-200 hover:border-[#612D91] hover:bg-indigo-50 cursor-move transition-all"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Icon className="w-4 h-4 text-gray-600" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs font-medium text-gray-900 truncate">{comp.name}</div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Feedback - Accordion */}
+              {COMPONENT_LIBRARY.feedback && (
+                <div className="mb-3">
+                  <button
+                    onClick={() => toggleCategory("feedback")}
+                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Bell className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm font-medium text-gray-900">Feedback</span>
+                    </div>
+                    {expandedCategories.feedback ? (
+                      <ChevronUp className="w-4 h-4 text-gray-600" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-gray-600" />
+                    )}
+                  </button>
+                  {expandedCategories.feedback && (
+                    <div className="mt-2 space-y-1 pl-6">
+                      {Object.entries(COMPONENT_LIBRARY.feedback)
+                        .filter(([key, comp]) =>
+                          !componentSearch || comp.name.toLowerCase().includes(componentSearch.toLowerCase())
+                        )
+                        .map(([key, comp]) => {
+                          const Icon = comp.icon;
+                          return (
+                            <div
+                              key={key}
+                              id={key}
+                              draggable={true}
+                              onDragStart={(e) => {
+                                e.dataTransfer.effectAllowed = "move";
+                                e.dataTransfer.setData("text/plain", key);
+                                setDraggedComponent(key);
+                              }}
+                              className="p-2 rounded-lg border border-gray-200 hover:border-[#612D91] hover:bg-indigo-50 cursor-move transition-all"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Icon className="w-4 h-4 text-gray-600" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs font-medium text-gray-900 truncate">{comp.name}</div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Advanced - Accordion */}
+              {COMPONENT_LIBRARY.advanced && (
+                <div className="mb-3">
+                  <button
+                    onClick={() => toggleCategory("advanced")}
+                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <GripVertical className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm font-medium text-gray-900">Advanced</span>
+                    </div>
+                    {expandedCategories.advanced ? (
+                      <ChevronUp className="w-4 h-4 text-gray-600" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-gray-600" />
+                    )}
+                  </button>
+                  {expandedCategories.advanced && (
+                    <div className="mt-2 space-y-1 pl-6">
+                      {Object.entries(COMPONENT_LIBRARY.advanced)
+                        .filter(([key, comp]) =>
+                          !componentSearch || comp.name.toLowerCase().includes(componentSearch.toLowerCase())
+                        )
+                        .map(([key, comp]) => {
+                          const Icon = comp.icon;
+                          return (
+                            <div
+                              key={key}
+                              id={key}
+                              draggable={true}
+                              onDragStart={(e) => {
+                                e.dataTransfer.effectAllowed = "move";
+                                e.dataTransfer.setData("text/plain", key);
+                                setDraggedComponent(key);
+                              }}
+                              className="p-2 rounded-lg border border-gray-200 hover:border-[#612D91] hover:bg-indigo-50 cursor-move transition-all"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Icon className="w-4 h-4 text-gray-600" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs font-medium text-gray-900 truncate">{comp.name}</div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Center - Canvas/Preview */}
+        <div className={`flex-1 bg-gray-50 overflow-hidden ${
+          viewMode === "split" ? "flex" : ""
+        }`}>
+          {/* Canvas View */}
+          {(viewMode === "canvas" || viewMode === "split") && (
+            <div className={`bg-gray-50 overflow-y-auto p-6 ${
+              viewMode === "split" ? "w-1/2 border-r border-gray-200" : "flex-1"
+            }`}>
+              <div className={`mb-4 text-xs font-medium text-gray-500 ${
+                responsiveMode === "desktop" ? "" : 
+                responsiveMode === "tablet" ? "max-w-3xl mx-auto" : "max-w-sm mx-auto"
+              }`}>
+                {responsiveMode === "desktop" && "Desktop View"}
+                {responsiveMode === "tablet" && "Tablet View (768px)"}
+                {responsiveMode === "mobile" && "Mobile View (375px)"}
+              </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+              >
+                <div className={`
+                  ${responsiveMode === "desktop" ? "" : 
+                    responsiveMode === "tablet" ? "max-w-3xl mx-auto" : "max-w-sm mx-auto"}
+                `}>
+                  <DroppableCanvas>
+                    {appData.pages[activePage].components.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+                        <Layers className="w-12 h-12 mb-4" />
+                        <p className="text-sm">Drag components here to build your app</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {appData.pages[activePage].components.map((comp) => (
+                          <ComponentPreview
+                            key={comp.id}
+                            component={comp}
+                            isSelected={selectedComponent?.id === comp.id}
+                            onClick={() => setSelectedComponent(comp)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </DroppableCanvas>
+                </div>
+                <DragOverlay>
+                  {draggedComponent && (
+                    <div className="p-4 bg-white rounded-lg shadow-xl border-2 border-[#612D91]">
+                      {Object.values(COMPONENT_LIBRARY)
+                        .flatMap((cat) => Object.entries(cat))
+                        .find(([key]) => key === draggedComponent)?.[1]?.name || draggedComponent}
+                    </div>
+                  )}
+                </DragOverlay>
+              </DndContext>
+            </div>
+          )}
+
+          {/* Preview View */}
+          {(viewMode === "preview" || viewMode === "split") && (
+            <div className={`bg-white overflow-y-auto p-6 ${
+              viewMode === "split" ? "w-1/2" : "flex-1"
+            }`}>
+              <div className={`mb-4 text-xs font-medium text-gray-500 ${
+                responsiveMode === "desktop" ? "" : 
+                responsiveMode === "tablet" ? "max-w-3xl mx-auto" : "max-w-sm mx-auto"
+              }`}>
+                Live Preview
+              </div>
+              <div className={`
+                ${responsiveMode === "desktop" ? "" : 
+                  responsiveMode === "tablet" ? "max-w-3xl mx-auto" : "max-w-sm mx-auto"}
+              `}>
+                <LivePreview
+                  components={appData.pages[activePage].components}
+                  dataModel={appData.dataModel}
+                  responsiveMode={responsiveMode}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Sidebar - Enhanced Properties */}
+        <div className="w-80 bg-white border-l border-gray-200 overflow-y-auto">
+          <div className="p-4 space-y-4">
+            {selectedComponent ? (
+              <EnhancedPropertyPanel
+                component={selectedComponent}
+                appData={appData}
+                activePage={activePage}
+                dataModel={appData.dataModel}
+                onUpdate={(updatedComponent) => {
+                  const updated = appData.pages[activePage].components.map((c) =>
+                    c.id === selectedComponent.id ? updatedComponent : c
+                  );
+                  const updatedPages = [...appData.pages];
+                  updatedPages[activePage].components = updated;
+                  setAppData({ ...appData, pages: updatedPages });
+                  setSelectedComponent(updatedComponent);
+                }}
+                onDelete={() => {
+                  const updated = appData.pages[activePage].components.filter(
+                    (c) => c.id !== selectedComponent.id
+                  );
+                  const updatedPages = [...appData.pages];
+                  updatedPages[activePage].components = updated;
+                  setAppData({ ...appData, pages: updatedPages });
+                  setSelectedComponent(null);
+                }}
+              />
+            ) : (
+              <div className="space-y-4">
+                <div className="p-4 rounded-lg bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="w-4 h-4 text-indigo-600" />
+                    <h3 className="font-semibold text-gray-900 text-sm">AI Watchtower</h3>
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    AI Watchtower will be automatically integrated with your app for intelligent reasoning and chat.
+                  </p>
+                  <div className="flex items-center gap-2 mt-3 text-xs text-gray-500">
+                    <span className="px-2 py-1 rounded bg-white">✓ Auto-configured</span>
+                    <span className="px-2 py-1 rounded bg-white">✓ Platform-aware</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Entity Editor Modal */}
+      {editingEntity && (
+        <EntityEditor
+          entity={editingEntity}
+          entities={appData.dataModel.entities || []}
+          onSave={(updatedEntity) => {
+            const updated = appData.dataModel.entities.map((e) =>
+              e.id === editingEntity.id ? updatedEntity : e
+            );
+            setAppData({
+              ...appData,
+              dataModel: { entities: updated },
+            });
+            setEditingEntity(null);
+          }}
+          onClose={() => setEditingEntity(null)}
+        />
+      )}
+
+      {/* Code Generator Modal */}
+      {showCodeGenerator && (
+        <CodeGenerator
+          appData={appData}
+          basicInfo={basicInfo}
+          onClose={() => setShowCodeGenerator(false)}
+          onDeploy={(generatedApp) => {
+            const userApps = JSON.parse(localStorage.getItem("fabStore.userApps") || "[]");
+            const appToSave = {
+              ...generatedApp,
+              status: "Published",
+              publishedAt: new Date().toISOString(),
+            };
+            userApps.push(appToSave);
+            localStorage.setItem("fabStore.userApps", JSON.stringify(userApps));
+            setShowCodeGenerator(false);
+            onSave?.(appToSave);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Component Preview
+function ComponentPreview({ component, isSelected, onClick }) {
+  const componentDef = Object.values(COMPONENT_LIBRARY)
+    .flatMap((cat) => Object.entries(cat))
+    .find(([key]) => key === component.type)?.[1];
+
+  const Icon = componentDef?.icon || Layers;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      onClick={onClick}
+      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+        isSelected
+          ? "border-[#612D91] bg-indigo-50"
+          : "border-gray-200 hover:border-gray-300 bg-white"
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-lg bg-gray-100">
+          <Icon className="w-5 h-5 text-gray-600" />
+        </div>
+        <div className="flex-1">
+          <div className="font-medium text-gray-900">{component.name}</div>
+          <div className="text-xs text-gray-500">{component.type}</div>
+          {component.dataBinding && (
+            <div className="text-xs text-indigo-600 mt-1">Bound to: {component.dataBinding}</div>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// Enhanced Property Panel (ToolJet-style)
+function EnhancedPropertyPanel({ component, appData, activePage, dataModel, onUpdate, onDelete }) {
+  const componentDef = Object.values(COMPONENT_LIBRARY)
+    .flatMap((cat) => Object.entries(cat))
+    .find(([key]) => key === component.type)?.[1];
+
+  const properties = componentDef?.properties || {};
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-gray-900">Component Properties</h3>
+        <button
+          onClick={onDelete}
+          className="p-1.5 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
+          title="Delete"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Basic Properties */}
+      <div className="space-y-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Component Name</label>
+          <input
+            type="text"
+            value={component.name}
+            onChange={(e) => onUpdate({ ...component, name: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Data Binding</label>
+          <select
+            value={component.dataBinding || ""}
+            onChange={(e) => onUpdate({ ...component, dataBinding: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+          >
+            <option value="">None</option>
+            {dataModel.entities?.map((entity) => (
+              <option key={entity.id} value={entity.name}>
+                {entity.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Component-Specific Properties */}
+      {Object.keys(properties).length > 0 && (
+        <div className="border-t border-gray-200 pt-4">
+          <h4 className="text-xs font-semibold text-gray-700 mb-3 uppercase">Style & Layout</h4>
+          <div className="space-y-3">
+            {Object.entries(properties).map(([key, prop]) => (
+              <div key={key}>
+                <label className="block text-xs font-medium text-gray-700 mb-1">{prop.label}</label>
+                {prop.type === "number" && (
+                  <input
+                    type="number"
+                    value={component.props?.[key] ?? prop.default}
+                    onChange={(e) =>
+                      onUpdate({
+                        ...component,
+                        props: { ...component.props, [key]: Number(e.target.value) },
+                      })
+                    }
+                    min={prop.min}
+                    max={prop.max}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+                  />
+                )}
+                {prop.type === "color" && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={component.props?.[key] ?? prop.default}
+                      onChange={(e) =>
+                        onUpdate({
+                          ...component,
+                          props: { ...component.props, [key]: e.target.value },
+                        })
+                      }
+                      className="w-12 h-10 border border-gray-300 rounded cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={component.props?.[key] ?? prop.default}
+                      onChange={(e) =>
+                        onUpdate({
+                          ...component,
+                          props: { ...component.props, [key]: e.target.value },
+                        })
+                      }
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+                    />
+                  </div>
+                )}
+                {prop.type === "text" && (
+                  <input
+                    type="text"
+                    value={component.props?.[key] ?? prop.default}
+                    onChange={(e) =>
+                      onUpdate({
+                        ...component,
+                        props: { ...component.props, [key]: e.target.value },
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+                  />
+                )}
+                {prop.type === "boolean" && (
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={component.props?.[key] ?? prop.default}
+                      onChange={(e) =>
+                        onUpdate({
+                          ...component,
+                          props: { ...component.props, [key]: e.target.checked },
+                        })
+                      }
+                      className="w-4 h-4 text-[#612D91] rounded focus:ring-[#612D91]"
+                    />
+                    <span className="text-xs text-gray-600">{prop.label}</span>
+                  </label>
+                )}
+                {prop.type === "select" && (
+                  <select
+                    value={component.props?.[key] ?? prop.default}
+                    onChange={(e) =>
+                      onUpdate({
+                        ...component,
+                        props: { ...component.props, [key]: e.target.value },
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+                  >
+                    {prop.options?.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="border-t border-gray-200 pt-4">
+        <button
+          onClick={onDelete}
+          className="w-full px-4 py-2 rounded-lg border border-red-200 text-red-700 font-medium hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
+        >
+          <Trash2 className="w-4 h-4" />
+          Remove Component
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Entity Editor Component
+function EntityEditor({ entity, entities, onSave, onClose }) {
+  const [editedEntity, setEditedEntity] = useState(() => ({
+    ...entity,
+    fields: entity.fields || [],
+    relationships: entity.relationships || [],
+  }));
+
+  const fieldTypes = [
+    { value: "string", label: "Text", icon: Type },
+    { value: "number", label: "Number", icon: Hash },
+    { value: "date", label: "Date", icon: Calendar },
+    { value: "boolean", label: "Boolean", icon: CheckSquare },
+    { value: "reference", label: "Reference", icon: Link },
+    { value: "file", label: "File", icon: FileText },
+    { value: "enum", label: "Enum", icon: Radio },
+    { value: "json", label: "JSON", icon: Code },
+  ];
+
+  const addField = () => {
+    setEditedEntity({
+      ...editedEntity,
+      fields: [
+        ...editedEntity.fields,
+        {
+          id: `field-${Date.now()}`,
+          name: "newField",
+          type: "string",
+          required: false,
+          defaultValue: null,
+          validation: null,
+        },
+      ],
+    });
+  };
+
+  const updateField = (fieldId, updates) => {
+    setEditedEntity({
+      ...editedEntity,
+      fields: editedEntity.fields.map((f) => (f.id === fieldId ? { ...f, ...updates } : f)),
+    });
+  };
+
+  const removeField = (fieldId) => {
+    setEditedEntity({
+      ...editedEntity,
+      fields: editedEntity.fields.filter((f) => f.id !== fieldId),
+    });
+  };
+
+  const addRelationship = () => {
+    setEditedEntity({
+      ...editedEntity,
+      relationships: [
+        ...editedEntity.relationships,
+        {
+          id: `rel-${Date.now()}`,
+          type: "one-to-many",
+          targetEntity: entities.find((e) => e.id !== entity.id)?.id || "",
+          field: "",
+        },
+      ],
+    });
+  };
+
+  const updateRelationship = (relId, updates) => {
+    setEditedEntity({
+      ...editedEntity,
+      relationships: editedEntity.relationships.map((r) =>
+        r.id === relId ? { ...r, ...updates } : r
+      ),
+    });
+  };
+
+  const removeRelationship = (relId) => {
+    setEditedEntity({
+      ...editedEntity,
+      relationships: editedEntity.relationships.filter((r) => r.id !== relId),
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+      >
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Edit Entity: {entity.name}</h3>
+            <p className="text-sm text-gray-600 mt-1">Configure fields, types, and relationships</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+            <X className="w-5 h-5 text-gray-600" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Entity Name</label>
+            <input
+              type="text"
+              value={editedEntity.name}
+              onChange={(e) => setEditedEntity({ ...editedEntity, name: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-semibold text-gray-900">Fields</h4>
+              <button
+                onClick={addField}
+                className="px-3 py-1.5 rounded-lg bg-[#612D91] text-white text-sm font-medium hover:bg-[#5B2E90] transition-colors flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Add Field
+              </button>
+            </div>
+            <div className="space-y-3">
+              {editedEntity.fields.map((field) => {
+                const FieldTypeIcon = fieldTypes.find((ft) => ft.value === field.type)?.icon || Type;
+                return (
+                  <div key={field.id} className="p-4 rounded-lg border border-gray-200 bg-gray-50">
+                    <div className="grid grid-cols-12 gap-3 items-start">
+                      <div className="col-span-4">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Field Name</label>
+                        <input
+                          type="text"
+                          value={field.name}
+                          onChange={(e) => updateField(field.id, { name: e.target.value })}
+                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
+                        <select
+                          value={field.type}
+                          onChange={(e) => updateField(field.id, { type: e.target.value })}
+                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+                        >
+                          {fieldTypes.map((ft) => (
+                            <option key={ft.value} value={ft.value}>
+                              {ft.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Required</label>
+                        <label className="flex items-center h-9 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={field.required || false}
+                            onChange={(e) => updateField(field.id, { required: e.target.checked })}
+                            className="w-4 h-4 text-[#612D91] rounded focus:ring-[#612D91]"
+                          />
+                        </label>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Default</label>
+                        <input
+                          type="text"
+                          value={field.defaultValue || ""}
+                          onChange={(e) => updateField(field.id, { defaultValue: e.target.value })}
+                          placeholder="Optional"
+                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+                        />
+                      </div>
+                      <div className="col-span-1 flex items-end">
+                        <button
+                          onClick={() => removeField(field.id)}
+                          className="p-1.5 rounded hover:bg-red-50 text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {field.type === "enum" && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Enum Values</label>
+                        <input
+                          type="text"
+                          value={field.enumValues?.join(", ") || ""}
+                          onChange={(e) =>
+                            updateField(field.id, {
+                              enumValues: e.target.value.split(",").map((v) => v.trim()).filter(Boolean),
+                            })
+                          }
+                          placeholder="Option1, Option2, Option3"
+                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+                        />
+                      </div>
+                    )}
+
+                    {field.type === "reference" && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">References Entity</label>
+                        <select
+                          value={field.referenceEntity || ""}
+                          onChange={(e) => updateField(field.id, { referenceEntity: e.target.value })}
+                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+                        >
+                          <option value="">Select entity...</option>
+                          {entities
+                            .filter((e) => e.id !== entity.id)
+                            .map((e) => (
+                              <option key={e.id} value={e.id}>
+                                {e.name}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    )}
+
+                    <div className="mt-3 pt-3 border-t border-gray-200 grid grid-cols-2 gap-3">
+                      {field.type === "number" && (
+                        <>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Min Value</label>
+                            <input
+                              type="number"
+                              value={field.min || ""}
+                              onChange={(e) => updateField(field.id, { min: e.target.value ? Number(e.target.value) : null })}
+                              className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Max Value</label>
+                            <input
+                              type="number"
+                              value={field.max || ""}
+                              onChange={(e) => updateField(field.id, { max: e.target.value ? Number(e.target.value) : null })}
+                              className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                            />
+                          </div>
+                        </>
+                      )}
+                      {field.type === "string" && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Max Length</label>
+                          <input
+                            type="number"
+                            value={field.maxLength || ""}
+                            onChange={(e) => updateField(field.id, { maxLength: e.target.value ? Number(e.target.value) : null })}
+                            className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-semibold text-gray-900">Relationships</h4>
+              <button
+                onClick={addRelationship}
+                className="px-3 py-1.5 rounded-lg bg-[#612D91] text-white text-sm font-medium hover:bg-[#5B2E90] transition-colors flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Add Relationship
+              </button>
+            </div>
+            <div className="space-y-3">
+              {editedEntity.relationships.map((rel) => (
+                <div key={rel.id} className="p-4 rounded-lg border border-gray-200 bg-gray-50">
+                  <div className="grid grid-cols-12 gap-3 items-center">
+                    <div className="col-span-4">
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
+                      <select
+                        value={rel.type}
+                        onChange={(e) => updateRelationship(rel.id, { type: e.target.value })}
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+                      >
+                        <option value="one-to-many">One-to-Many</option>
+                        <option value="many-to-many">Many-to-Many</option>
+                        <option value="one-to-one">One-to-One</option>
+                      </select>
+                    </div>
+                    <div className="col-span-4">
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Target Entity</label>
+                      <select
+                        value={rel.targetEntity}
+                        onChange={(e) => updateRelationship(rel.id, { targetEntity: e.target.value })}
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+                      >
+                        <option value="">Select entity...</option>
+                        {entities
+                          .filter((e) => e.id !== entity.id)
+                          .map((e) => (
+                            <option key={e.id} value={e.id}>
+                              {e.name}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                    <div className="col-span-3">
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Field Name</label>
+                      <input
+                        type="text"
+                        value={rel.field}
+                        onChange={(e) => updateRelationship(rel.id, { field: e.target.value })}
+                        placeholder="fieldName"
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-[#612D91] focus:border-transparent"
+                      />
+                    </div>
+                    <div className="col-span-1 flex items-end">
+                      <button
+                        onClick={() => removeRelationship(rel.id)}
+                        className="p-1.5 rounded hover:bg-red-50 text-red-600"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {editedEntity.relationships.length === 0 && (
+                <div className="text-center py-4 text-gray-400 text-xs">No relationships defined</div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-gray-200 flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => {
+              onSave(editedEntity);
+              onClose();
+            }}
+            className="px-6 py-2 rounded-lg bg-gradient-to-r from-[#612D91] to-[#A64AC9] text-white font-medium hover:shadow-lg transition-all"
+          >
+            Save Entity
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// Code Generator Component
+function CodeGenerator({ appData, basicInfo, onClose, onDeploy }) {
+  const [generating, setGenerating] = useState(false);
+  const [progress, setProgress] = useState({ step: "", progress: 0 });
+  const [generatedCode, setGeneratedCode] = useState(null);
+
+  const generateCode = async () => {
+    setGenerating(true);
+    const steps = [
+      { step: "Generating solution structure...", progress: 10 },
+      { step: "Creating data files from entities...", progress: 30 },
+      { step: "Generating component files...", progress: 50 },
+      { step: "Creating API service layer...", progress: 70 },
+      { step: "Wiring platform adapter...", progress: 85 },
+      { step: "Configuring AI Watchtower...", progress: 95 },
+      { step: "Finalizing...", progress: 100 },
+    ];
+
+    for (const s of steps) {
+      setProgress(s);
+      await new Promise((resolve) => setTimeout(resolve, 600));
+    }
+
+    const solutionName = basicInfo.name.toLowerCase().replace(/\s+/g, "-");
+    const generated = {
+      structure: {
+        basePath: `src/apps/${solutionName}/`,
+        files: [
+          { path: `data/${solutionName}.js`, type: "data" },
+          { path: `components/Layout.jsx`, type: "component" },
+          { path: `services/api.js`, type: "service" },
+          { path: `services/platformAdapter.js`, type: "adapter" },
+        ],
+      },
+      appConfig: {
+        id: `custom-${Date.now()}`,
+        name: basicInfo.name,
+        tagline: basicInfo.tagline,
+        description: basicInfo.description,
+        industry: basicInfo.industry,
+        platformId: basicInfo.platform,
+        platformName: basicInfo.platformName,
+        dataModel: appData.dataModel,
+        pages: appData.pages,
+        launchKey: solutionName,
+        status: "Published",
+      },
+    };
+
+    setGeneratedCode(generated);
+    setGenerating(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+      >
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Generate & Deploy Application</h3>
+            <p className="text-sm text-gray-600 mt-1">Generate code structure and deploy to FAB Store</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+            <X className="w-5 h-5 text-gray-600" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6">
+          {!generating && !generatedCode && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg bg-indigo-50 border border-indigo-200">
+                <h4 className="font-semibold text-gray-900 mb-2">What will be generated:</h4>
+                <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
+                  <li>Solution structure: <code className="text-xs bg-white px-1 rounded">src/apps/{basicInfo.name.toLowerCase().replace(/\s+/g, "-")}/</code></li>
+                  <li>Data files from your entity schema</li>
+                  <li>Component files from canvas</li>
+                  <li>API service layer</li>
+                  <li>Platform adapter ({basicInfo.platformName})</li>
+                  <li>AI Watchtower integration</li>
+                </ul>
+              </div>
+              <button
+                onClick={generateCode}
+                className="w-full px-6 py-3 rounded-lg bg-gradient-to-r from-[#612D91] to-[#A64AC9] text-white font-medium hover:shadow-lg transition-all flex items-center justify-center gap-2"
+              >
+                <Code className="w-5 h-5" />
+                Generate Code
+              </button>
+            </div>
+          )}
+
+          {generating && (
+            <div className="space-y-4">
+              <div className="text-center py-8">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-[#612D91] to-[#A64AC9] mb-4 animate-pulse">
+                  <Code className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">{progress.step}</h3>
+                <div className="w-full bg-gray-200 rounded-full h-3 max-w-md mx-auto">
+                  <motion.div
+                    className="bg-gradient-to-r from-[#612D91] to-[#A64AC9] h-3 rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress.progress}%` }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </div>
+                <p className="text-sm text-gray-600 mt-2">{progress.progress}%</p>
+              </div>
+            </div>
+          )}
+
+          {generatedCode && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <Check className="w-5 h-5 text-emerald-600" />
+                  <h4 className="font-semibold text-gray-900">Code Generated Successfully!</h4>
+                </div>
+                <p className="text-sm text-gray-700">
+                  Your application code has been generated. Review the structure below, then deploy to FAB Store.
+                </p>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">Generated Structure:</h4>
+                <div className="bg-gray-900 rounded-lg p-4 text-xs text-gray-300 font-mono space-y-1">
+                  {generatedCode.structure.files.map((file, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <span className="text-gray-500">📄</span>
+                      <span>{generatedCode.structure.basePath}{file.path}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    const codeStr = JSON.stringify(generatedCode.structure, null, 2);
+                    navigator.clipboard.writeText(codeStr);
+                  }}
+                  className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Copy className="w-4 h-4" />
+                  Copy Structure
+                </button>
+                <button
+                  onClick={() => onDeploy(generatedCode.appConfig)}
+                  className="flex-1 px-6 py-2 rounded-lg bg-gradient-to-r from-[#612D91] to-[#A64AC9] text-white font-medium hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Deploy to FAB Store
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// Live Preview Component
+function LivePreview({ components, dataModel, responsiveMode }) {
+  return (
+    <div className="space-y-4">
+      {components.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+          <Eye className="w-12 h-12 mb-4" />
+          <p className="text-sm">No components to preview</p>
+          <p className="text-xs mt-1">Add components to see live preview</p>
+        </div>
+      ) : (
+        components.map((comp) => {
+          const componentDef = Object.values(COMPONENT_LIBRARY)
+            .flatMap((cat) => Object.entries(cat))
+            .find(([key]) => key === comp.type)?.[1];
+
+          const Icon = componentDef?.icon || Layers;
+          const props = comp.props || {};
+
+          // Render component preview based on type
+          return (
+            <div
+              key={comp.id}
+              className="p-4 rounded-lg border border-gray-200 bg-white shadow-sm"
+              style={{
+                padding: props.padding ? `${props.padding}px` : undefined,
+                margin: props.margin ? `${props.margin}px` : undefined,
+                backgroundColor: props.backgroundColor || undefined,
+                borderRadius: props.borderRadius ? `${props.borderRadius}px` : undefined,
+                borderColor: props.borderColor || undefined,
+              }}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-lg bg-gray-100">
+                  <Icon className="w-4 h-4 text-gray-600" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-gray-900">{comp.name}</div>
+                  <div className="text-xs text-gray-500">{comp.type}</div>
+                </div>
+              </div>
+
+              {/* Component-specific preview */}
+              {comp.type === "data-table" && (
+                <div className="mt-3 space-y-2">
+                  <div className="h-8 bg-gray-100 rounded"></div>
+                  <div className="h-6 bg-gray-50 rounded"></div>
+                  <div className="h-6 bg-gray-50 rounded"></div>
+                  <div className="h-6 bg-gray-50 rounded"></div>
+                </div>
+              )}
+
+              {comp.type === "form" && (
+                <div className="mt-3 space-y-3">
+                  <div className="h-10 bg-gray-50 rounded border border-gray-200"></div>
+                  <div className="h-10 bg-gray-50 rounded border border-gray-200"></div>
+                  <div className="h-10 bg-gray-50 rounded border border-gray-200"></div>
+                </div>
+              )}
+
+              {comp.type === "metric-card" && (
+                <div className="mt-3">
+                  <div className="text-2xl font-bold text-gray-900">1,234</div>
+                  <div className="text-xs text-gray-500 mt-1">Metric Value</div>
+                </div>
+              )}
+
+              {comp.type === "chart" && (
+                <div className="mt-3 h-32 bg-gradient-to-br from-indigo-50 to-purple-50 rounded flex items-center justify-center">
+                  <Code className="w-8 h-8 text-gray-400" />
+                </div>
+              )}
+
+              {comp.type === "grid" && (
+                <div
+                  className="mt-3 grid gap-2"
+                  style={{
+                    gridTemplateColumns: `repeat(${props.columns || 3}, 1fr)`,
+                    gap: props.gap ? `${props.gap}px` : undefined,
+                  }}
+                >
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-16 bg-gray-100 rounded"></div>
+                  ))}
+                </div>
+              )}
+
+              {comp.dataBinding && (
+                <div className="mt-2 text-xs text-indigo-600 flex items-center gap-1">
+                  <Database className="w-3 h-3" />
+                  Bound to: {comp.dataBinding}
+                </div>
+              )}
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}

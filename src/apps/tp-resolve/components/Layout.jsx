@@ -9,11 +9,11 @@ const TP_RESOLVE_NAV_ITEMS = [
 export default function TPResolveLayout({ children, onNavigate, active }) {
   return (
     <SolutionLayout
-      productName="TP Resolve"
+      productName="TP Resolve Appeals"
       tagline="Appeals & Grievances Intelligence"
       storageKey="tpresolve"
       navItems={TP_RESOLVE_NAV_ITEMS}
-      footerText="TP Resolve • Powered by SOP Navigator"
+      footerText="TP Resolve Appeals • Powered by SOP Executor"
       onNavigate={onNavigate}
       active={active}
     >

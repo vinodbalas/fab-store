@@ -19,6 +19,18 @@ import TPResolveHomeDashboard from "./apps/tp-resolve/components/HomeDashboard";
 import TPResolveWorklist from "./apps/tp-resolve/components/Worklist";
 import TPResolveAIHub from "./apps/tp-resolve/components/AIHub";
 import TPResolveLayout from "./apps/tp-resolve/components/Layout";
+// TP Lend imports
+import TPLendHomeDashboard from "./apps/tp-lend/components/HomeDashboard";
+import TPLendWorklist from "./apps/tp-lend/components/Worklist";
+import TPLendAIHub from "./apps/tp-lend/components/AIHub";
+import TPLendLayout from "./apps/tp-lend/components/Layout";
+// TP Dispatch imports
+import TPDispatchHomeDashboard from "./apps/tp-dispatch/components/HomeDashboard";
+import TPDispatchWorklist from "./apps/tp-dispatch/components/Worklist";
+import TPDispatchLayout from "./apps/tp-dispatch/components/Layout";
+// TP Inventory imports
+import TPInventoryHomeDashboard from "./apps/tp-inventory/components/HomeDashboard";
+import TPInventoryLayout from "./apps/tp-inventory/components/Layout";
 import ArchitecturePage from "./components/ArchitecturePage";
 
 const SHOW_LEGACY_LOGIN = false;
@@ -27,6 +39,8 @@ function AppContent() {
   const { isAuthenticated } = useAuth();
   const [selectedClaim, setSelectedClaim] = useState(null);
   const [selectedCase, setSelectedCase] = useState(null);
+  const [selectedLoan, setSelectedLoan] = useState(null);
+  const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   // Default to FAB store, and persist it in sessionStorage to survive re-renders
   const [currentPage, setCurrentPage] = useState(() => {
     if (typeof window !== "undefined") {
@@ -89,8 +103,10 @@ function AppContent() {
 
   // Determine which view to show
   const getView = () => {
+    if (selectedLoan) return "lend-aihub";
     if (selectedCase) return "resolve-aihub";
     if (selectedClaim) return "aihub";
+    if (selectedWorkOrder) return "dispatch-aihub";
     if (currentPage === "architecture") return "architecture";
     if (currentPage === "store") return "store";
     if (currentPage === "home") return "home";
@@ -102,6 +118,12 @@ function AppContent() {
     if (currentPage === "pitch") return "pitch";
     if (currentPage === "resolve") return "resolve-home";
     if (currentPage === "resolve/worklist") return "resolve-worklist";
+    if (currentPage === "lend") return "lend-home";
+    if (currentPage === "lend/worklist") return "lend-worklist";
+    if (currentPage === "dispatch") return "dispatch-home";
+    if (currentPage === "dispatch/worklist") return "dispatch-worklist";
+    if (currentPage === "inventory") return "inventory-home";
+    if (currentPage === "inventory/list") return "inventory-list";
     return "home"; // Default to home
   };
 
@@ -113,6 +135,8 @@ function AppContent() {
     setCurrentPage(key);
     setSelectedClaim(null);
     setSelectedCase(null);
+    setSelectedLoan(null);
+    setSelectedWorkOrder(null);
   };
 
   const handleLaunchApp = (targetKey) => {
@@ -120,6 +144,8 @@ function AppContent() {
     setCurrentPage(targetKey);
     setSelectedClaim(null);
     setSelectedCase(null);
+    setSelectedLoan(null);
+    setSelectedWorkOrder(null);
   };
 
   const getActiveKey = () => {
@@ -182,6 +208,123 @@ function AppContent() {
           )}
         </AnimatePresence>
       </TPResolveLayout>
+    );
+  }
+
+  // TP Lend shell: separate layout and no Cogniclaim navigation/branding
+  if (view === "lend-home" || view === "lend-worklist" || view === "lend-aihub") {
+    return (
+      <TPLendLayout onNavigate={handleNavigate} active={currentPage}>
+        <AnimatePresence mode="wait">
+          {view === "lend-aihub" ? (
+            <motion.div
+              key="lend-aihub"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.4 }}
+            >
+              <TPLendAIHub loan={selectedLoan} onBack={() => setSelectedLoan(null)} />
+            </motion.div>
+          ) : view === "lend-worklist" ? (
+            <motion.div
+              key="lend-worklist"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.4 }}
+            >
+              <TPLendWorklist onSelectLoan={setSelectedLoan} onNavigate={handleNavigate} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="lend-home"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.4 }}
+            >
+              <TPLendHomeDashboard onSelectLoan={setSelectedLoan} onNavigate={handleNavigate} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </TPLendLayout>
+    );
+  }
+
+  // TP Dispatch shell: separate layout
+  if (view === "dispatch-home" || view === "dispatch-worklist" || view === "dispatch-aihub") {
+    return (
+      <TPDispatchLayout onNavigate={handleNavigate} active={currentPage}>
+        <AnimatePresence mode="wait">
+          {view === "dispatch-aihub" ? (
+            <motion.div
+              key="dispatch-aihub"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.4 }}
+              className="h-full"
+            >
+              <TPDispatchAIHub workOrder={selectedWorkOrder} onBack={() => setSelectedWorkOrder(null)} />
+            </motion.div>
+          ) : view === "dispatch-worklist" ? (
+            <motion.div
+              key="dispatch-worklist"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.4 }}
+            >
+              <TPDispatchWorklist onSelectWorkOrder={setSelectedWorkOrder} onNavigate={handleNavigate} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="dispatch-home"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.4 }}
+            >
+              <TPDispatchHomeDashboard onSelectWorkOrder={setSelectedWorkOrder} onNavigate={handleNavigate} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </TPDispatchLayout>
+    );
+  }
+
+  // TP Inventory shell
+  if (view === "inventory-home" || view === "inventory-list") {
+    return (
+      <TPInventoryLayout onNavigate={handleNavigate} active={currentPage}>
+        <AnimatePresence mode="wait">
+          {view === "inventory-list" ? (
+            <motion.div
+              key="inventory-list"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.4 }}
+            >
+              <div className="p-6">
+                <h1 className="text-2xl font-bold mb-4">All Inventory Items</h1>
+                <p className="text-gray-600">Full inventory list coming soon...</p>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="inventory-home"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.4 }}
+            >
+              <TPInventoryHomeDashboard onNavigate={handleNavigate} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </TPInventoryLayout>
     );
   }
 

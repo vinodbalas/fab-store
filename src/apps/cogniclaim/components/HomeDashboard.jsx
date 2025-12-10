@@ -32,16 +32,17 @@ const actionableItems = [
     priority: "high",
     link: "worklist",
   },
-  {
-    title: "High-value claim identified: ₹45K potential recovery",
-    detail: "Claim #C-2024-0892 requires immediate attention (SOP 5.1.3).",
-    icon: Target,
-    type: "opportunity",
-    metric: "₹45K",
-    action: "Review claim",
-    priority: "high",
-    link: "worklist",
-  },
+  // VKV: revisit or TODO - Hidden for now
+  // {
+  //   title: "High-value claim identified: ₹45K potential recovery",
+  //   detail: "Claim #C-2024-0892 requires immediate attention (SOP 5.1.3).",
+  //   icon: Target,
+  //   type: "opportunity",
+  //   metric: "₹45K",
+  //   action: "Review claim",
+  //   priority: "high",
+  //   link: "worklist",
+  // },
   {
     title: "Anomaly detected: Unusual delay pattern in GlobalMed claims",
     detail: "AI identified 5 claims with 2x longer processing time. Root cause analysis suggests missing documentation.",
@@ -62,26 +63,28 @@ const actionableItems = [
     priority: "medium",
     link: "worklist",
   },
-  {
-    title: "Pattern spotted: missing pre-auth docs (SOP 3.2.1)",
-    detail: "Recurring with Apex Health — consider template reminder.",
-    icon: FileCheck,
-    type: "pattern",
-    metric: "8x",
-    action: "Setup template",
-    priority: "low",
-    link: "worklist",
-  },
-  {
-    title: "Revenue recovery opportunity: ₹2.3M in pending claims",
-    detail: "Focus on high-value claims in 'Pending Review' status for maximum impact.",
-    icon: DollarSign,
-    type: "opportunity",
-    metric: "₹2.3M",
-    action: "View claims",
-    priority: "high",
-    link: "worklist",
-  },
+  // VKV: revisit or TODO - Hidden for now
+  // {
+  //   title: "Pattern spotted: missing pre-auth docs (SOP 3.2.1)",
+  //   detail: "Recurring with Apex Health — consider template reminder.",
+  //   icon: FileCheck,
+  //   type: "pattern",
+  //   metric: "8x",
+  //   action: "Setup template",
+  //   priority: "low",
+  //   link: "worklist",
+  // },
+  // VKV: revisit or TODO - Hidden for now
+  // {
+  //   title: "Revenue recovery opportunity: ₹2.3M in pending claims",
+  //   detail: "Focus on high-value claims in 'Pending Review' status for maximum impact.",
+  //   icon: DollarSign,
+  //   type: "opportunity",
+  //   metric: "₹2.3M",
+  //   action: "View claims",
+  //   priority: "high",
+  //   link: "worklist",
+  // },
 ];
 
 // Informational insights - metrics and trends for awareness
@@ -258,6 +261,125 @@ export default function HomeDashboard({ onNavigate, onSelectClaim }) {
           </div>
         </div>
 
+        {/* SLA & Late Payment Penalty Risk Section */}
+        <div className="mb-8">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl border-2 border-red-200 dark:border-red-800 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 p-6 shadow-lg"
+          >
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
+                  <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
+                    SLA Breach & Late Payment Penalty Risk
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Claims that missed processing deadlines and may incur penalties
+                  </p>
+                </div>
+              </div>
+              <div className="px-3 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs font-semibold">
+                Critical
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              {/* Total Claims Missed SLA - YTD */}
+              <div className="bg-white/80 dark:bg-gray-900/80 rounded-lg p-4 border border-red-200 dark:border-red-800">
+                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Missed SLA (YTD)</div>
+                <div className="text-2xl font-bold text-red-600 dark:text-red-400 mb-1">1,247</div>
+                <div className="text-xs text-gray-500 dark:text-gray-500">claims</div>
+              </div>
+
+              {/* Total Claims Missed SLA - QTD */}
+              <div className="bg-white/80 dark:bg-gray-900/80 rounded-lg p-4 border border-red-200 dark:border-red-800">
+                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Missed SLA (QTD)</div>
+                <div className="text-2xl font-bold text-red-600 dark:text-red-400 mb-1">312</div>
+                <div className="text-xs text-gray-500 dark:text-gray-500">claims</div>
+              </div>
+
+              {/* Estimated Penalty Risk */}
+              <div className="bg-white/80 dark:bg-gray-900/80 rounded-lg p-4 border border-orange-200 dark:border-orange-800">
+                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Penalty Risk (YTD)</div>
+                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400 mb-1">$4.2M</div>
+                <div className="text-xs text-gray-500 dark:text-gray-500">estimated</div>
+              </div>
+
+              {/* Penalty Risk - QTD */}
+              <div className="bg-white/80 dark:bg-gray-900/80 rounded-lg p-4 border border-orange-200 dark:border-orange-800">
+                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Penalty Risk (QTD)</div>
+                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400 mb-1">$1.1M</div>
+                <div className="text-xs text-gray-500 dark:text-gray-500">estimated</div>
+              </div>
+            </div>
+
+            {/* Top States by Total At-Risk Value (sum of all SLA-breached claims = total exposure) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white/80 dark:bg-gray-900/80 rounded-lg p-4 border border-red-200 dark:border-red-800">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                    Total At-Risk Value - Texas
+                  </div>
+                  <div className="px-2 py-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold">
+                    TX
+                  </div>
+                </div>
+                <div className="text-3xl font-bold text-red-600 dark:text-red-400 mb-1">$20.0M</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Sum of all SLA-breached claims • 247 claims</div>
+                <div className="mt-2 text-xs text-orange-600 dark:text-orange-400 font-medium">
+                  Potential penalty: ~$600K
+                </div>
+              </div>
+
+              <div className="bg-white/80 dark:bg-gray-900/80 rounded-lg p-4 border border-red-200 dark:border-red-800">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                    Total At-Risk Value - Michigan
+                  </div>
+                  <div className="px-2 py-1 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-semibold">
+                    MI
+                  </div>
+                </div>
+                <div className="text-3xl font-bold text-red-600 dark:text-red-400 mb-1">$14.8M</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Sum of all SLA-breached claims • 189 claims</div>
+                <div className="mt-2 text-xs text-orange-600 dark:text-orange-400 font-medium">
+                  Potential penalty: ~$445K
+                </div>
+              </div>
+            </div>
+
+            {/* Cogniclaim Value Proposition */}
+            <div className="mt-4 p-4 bg-gradient-to-r from-[#612D91]/10 to-[#A64AC9]/10 dark:from-[#612D91]/20 dark:to-[#A64AC9]/20 rounded-lg border border-[#612D91]/30">
+              <div className="flex items-start gap-3">
+                <Zap className="w-5 h-5 text-[#612D91] dark:text-[#A64AC9] flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                    Cogniclaim Impact
+                  </div>
+                  <div className="text-xs text-gray-700 dark:text-gray-300">
+                    AI-powered prioritization can prevent <span className="font-semibold text-[#612D91] dark:text-[#A64AC9]">~65% of SLA breaches</span> by 
+                    identifying high-risk claims early and routing them to appropriate workflows. Estimated savings: <span className="font-semibold">$2.7M annually</span> in avoided penalties.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-red-200 dark:border-red-800">
+              <button
+                onClick={() => onNavigate?.("worklist")}
+                className="text-sm font-semibold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 flex items-center gap-2"
+              >
+                → Review all SLA-breached claims
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        </div>
+
         {/* NEW: AI-Powered Priority Queue */}
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
@@ -329,7 +451,7 @@ export default function HomeDashboard({ onNavigate, onSelectClaim }) {
             <div className="p-1.5 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30">
               <AlertCircle className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">AI Anomaly Detection</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Anomaly Detection</h3>
             <span className="text-xs px-2 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-medium">
               🤖 AI Detected
             </span>

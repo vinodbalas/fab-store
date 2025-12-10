@@ -1,7 +1,7 @@
 /**
  * TP Resolve Platform Adapter
  *
- * Connects TP Resolve (solution) to SOP Navigator (platform)
+ * Connects TP Resolve (solution) to SOP Executor (platform)
  * Provides TP Resolve-specific SOP data to the platform
  */
 

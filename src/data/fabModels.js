@@ -4,6 +4,7 @@ export const fabModels = [
     name: "Lead Scoring Fabric",
     category: "Growth Intelligence",
     maturity: "Production",
+    modality: "Structured Data",
     signal: "Live",
     description:
       "Rank every inbound lead using behavioral signals, intent enrichments, and historical win curves to prioritize outreach that converts.",
@@ -21,6 +22,7 @@ export const fabModels = [
     name: "Propensity Modal",
     category: "Customer Science",
     maturity: "Pilot",
+    modality: "Structured Data",
     signal: "High velocity",
     description:
       "Detect churn and upsell propensity for each member with sequence models that blend conversation embeddings and account telemetry.",
@@ -38,6 +40,7 @@ export const fabModels = [
     name: "Claims Classification Studio",
     category: "Operational AI",
     maturity: "Production",
+    modality: "Text Based",
     signal: "SOC2 ready",
     description:
       "Auto-triage claims into denial, reconsideration, and fast-path buckets with audit-ready rationales mapped to SOP chapters.",
@@ -55,6 +58,7 @@ export const fabModels = [
     name: "Next Best Action Recommender",
     category: "Engagement",
     maturity: "Beta",
+    modality: "Text Based",
     signal: "FAB core",
     description:
       "Curate sequenced follow-ups across chat, voice, and human outreach with guardrails that respect compliance envelopes.",
@@ -72,6 +76,7 @@ export const fabModels = [
     name: "Fraud Triage Sentinel",
     category: "Risk",
     maturity: "Preview",
+    modality: "Structured Data",
     signal: "Zero trust",
     description:
       "Score claims and transactions for anomaly risk with hybrid graph + LLM reasoning, surfacing proof packs for investigators.",
@@ -89,6 +94,7 @@ export const fabModels = [
     name: "Omni Sentiment Fusion",
     category: "Experience Intelligence",
     maturity: "Production",
+    modality: "Multimodal",
     signal: "CX leverage",
     description:
       "Blend real-time voice emotion, chat semantics, and post-contact surveys to flag deteriorating sentiment before it hits the dashboard.",
@@ -106,6 +112,7 @@ export const fabModels = [
     name: "Compliance QA Modal",
     category: "Trust & Safety",
     maturity: "Pilot",
+    modality: "Multimodal",
     signal: "Audit spine",
     description:
       "Automate 100% interaction reviews with Teleperformance QA rubrics, red-flag policies, and narrative rationales ready for regulators.",
@@ -123,6 +130,7 @@ export const fabModels = [
     name: "Agent Coaching Reactor",
     category: "Operations",
     maturity: "Beta",
+    modality: "Audio",
     signal: "Human+AI",
     description:
       "Surface individualized coaching plans that tie KPI drift to skills, SOP gaps, and best-practice clips from top performers.",
@@ -140,6 +148,7 @@ export const fabModels = [
     name: "Collections Nudge Lab",
     category: "Revenue",
     maturity: "Preview",
+    modality: "Text Based",
     signal: "Reg compliant",
     description:
       "Design compliant outreach sequences for receivables and micro-collections, balancing empathy, promise-to-pay history, and channel mix.",

@@ -1,5 +1,5 @@
 /**
- * SOP Navigator Platform - Chat Agent
+ * SOP Executor Platform - Chat Agent
  * 
  * Provides AI chat functionality with context awareness.
  * Platform-agnostic implementation that accepts SOP data via provider

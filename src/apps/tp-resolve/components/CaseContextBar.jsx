@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronRight, Clock, AlertCircle } from "lucide-react";
+import { ArrowLeft, ChevronRight, Clock, AlertCircle, PanelRight } from "lucide-react";
 
 export default function CaseContextBar({ caseData, onBack, onToggleSop, sopOpen = false }) {
   // Calculate deadline urgency
@@ -35,7 +35,7 @@ export default function CaseContextBar({ caseData, onBack, onToggleSop, sopOpen 
           <ChevronRight className="w-3.5 h-3.5" />
           <span>Case {caseData.caseNumber}</span>
           <ChevronRight className="w-3.5 h-3.5" />
-          <span className="text-gray-700 dark:text-gray-300 font-medium">AI Watchtower</span>
+          <span className="text-gray-700 dark:text-gray-300 font-medium">AI Reasoning</span>
         </div>
       </div>
 
@@ -100,14 +100,17 @@ export default function CaseContextBar({ caseData, onBack, onToggleSop, sopOpen 
         {/* SOP Toggle Button */}
         <button
           onClick={onToggleSop}
-          className={`p-2.5 rounded-lg transition-all ${
+          className={`p-2.5 rounded-lg transition-all flex items-center gap-2 ${
             sopOpen 
-              ? 'bg-[#612D91] text-white hover:bg-[#612D91]/90 shadow-md' 
-              : 'bg-[#612D91] text-white hover:bg-[#612D91]/90 shadow-md'
+              ? 'bg-[#612D91] text-white hover:bg-[#512579] shadow-md' 
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
           }`}
-          title="Toggle SOP Reference Panel"
+          title={sopOpen ? "Close SOP Reference Panel" : "Open SOP Reference Panel"}
         >
-          <ChevronRight className={`w-5 h-5 transition-transform duration-300 ${sopOpen ? 'rotate-180' : ''}`} />
+          <PanelRight className={`w-5 h-5 ${sopOpen ? '' : 'opacity-70'}`} />
+          <span className="text-xs font-medium hidden sm:inline">
+            {sopOpen ? 'SOP' : 'SOP'}
+          </span>
         </button>
       </div>
     </div>

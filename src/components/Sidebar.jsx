@@ -25,7 +25,12 @@ const DEFAULT_NAV_ITEMS = [
   { key: "pitch", label: "Product Hub", icon: Sparkles },
 ];
 
-export default function Sidebar({ active = "home", onNavigate = () => {}, navItems }) {
+export default function Sidebar({
+  active = "home",
+  onNavigate = () => {},
+  navItems,
+  showSettings = true,
+}) {
   const [collapsed, setCollapsed] = useState(true);
   const { isDemoMode } = useDemoMode();
 
@@ -70,7 +75,7 @@ export default function Sidebar({ active = "home", onNavigate = () => {}, navIte
         })}
       </nav>
 
-      {/* Bottom section with Demo Mode, Settings and Collapse Toggle */}
+      {/* Bottom section with Demo Mode, Settings (optional) and Collapse Toggle */}
       <div className="border-t border-gray-200 dark:border-gray-800">
         {/* Demo Mode Toggle */}
         <button
@@ -100,30 +105,32 @@ export default function Sidebar({ active = "home", onNavigate = () => {}, navIte
           )}
         </button>
 
-        {/* Settings Button */}
-        <button
-          type="button"
-          onClick={() => onNavigate("settings")}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 transition-all group relative ${
-            active === "settings"
-              ? "bg-[#F5F3FF] dark:bg-[#4B2E83]/30 text-[#612D91] dark:text-[#A64AC9]"
-              : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-          }`}
-          title={collapsed ? "Settings" : ""}
-        >
-          <div className="w-full flex items-center gap-3 px-2">
-            <Settings className="w-5 h-5 shrink-0" />
-            {!collapsed && <span className="text-sm font-medium">Settings</span>}
-          </div>
-          
-          {/* Tooltip for collapsed state */}
-          {collapsed && (
-            <div className="absolute left-full ml-2 px-3 py-1.5 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 pointer-events-none">
-              Settings
-              <div className="absolute top-1/2 -left-1 -translate-y-1/2 w-2 h-2 bg-gray-900 dark:bg-gray-800 rotate-45" />
+        {/* Settings Button (optional) */}
+        {showSettings && (
+          <button
+            type="button"
+            onClick={() => onNavigate("settings")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 transition-all group relative ${
+              active === "settings"
+                ? "bg-[#F5F3FF] dark:bg-[#4B2E83]/30 text-[#612D91] dark:text-[#A64AC9]"
+                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+            }`}
+            title={collapsed ? "Settings" : ""}
+          >
+            <div className="w-full flex items-center gap-3 px-2">
+              <Settings className="w-5 h-5 shrink-0" />
+              {!collapsed && <span className="text-sm font-medium">Settings</span>}
             </div>
-          )}
-        </button>
+            
+            {/* Tooltip for collapsed state */}
+            {collapsed && (
+              <div className="absolute left-full ml-2 px-3 py-1.5 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 pointer-events-none">
+                Settings
+                <div className="absolute top-1/2 -left-1 -translate-y-1/2 w-2 h-2 bg-gray-900 dark:bg-gray-800 rotate-45" />
+              </div>
+            )}
+          </button>
+        )}
 
         {/* Help/Support Button */}
         <button

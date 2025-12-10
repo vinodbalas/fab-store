@@ -1,7 +1,28 @@
+import { fabApps } from "./fabApps";
+
+// Calculate platform metrics dynamically
+export function enrichPlatformWithMetrics(platform) {
+  const solutions = fabApps.filter((app) => app.platformId === platform.id);
+  const industries = [...new Set(solutions.map((app) => app.industry))];
+  const statuses = [...new Set(solutions.map((app) => app.status))];
+  
+  return {
+    ...platform,
+    metrics: {
+      solutionCount: solutions.length,
+      solutions: solutions.map((s) => s.id),
+      industries: industries,
+      industriesCount: industries.length,
+      statuses: statuses,
+      liveSolutions: solutions.filter((s) => s.status === "Live").length,
+    },
+  };
+}
+
 export const fabPlatforms = [
   {
     id: "sop-navigator",
-    name: "SOP Navigator",
+    name: "SOP Executor",
     tagline: "SOP-native platform for regulated operations",
     category: "Platform",
     industry: "Cross-Industry",
@@ -13,14 +34,9 @@ export const fabPlatforms = [
     accent: "from-[#5B2E90] to-[#A64AC9]",
     statusColor: "bg-emerald-100 text-emerald-700",
     categoryColor: "text-[#A64AC9]",
-    metrics: [
-      { label: "Solutions built", value: "1+" },
-      { label: "Industries", value: "Healthcare" },
-    ],
     stack: ["RAG", "GPT-4", "LangChain", "SOP Engine"],
-    solutions: ["cogniclaim"],
     documentation: {
-      overview: "SOP Navigator is a platform that enables rapid development of SOP-native solutions for regulated industries. It provides a complete AI reasoning engine, SOP matching capabilities, and compliance guardrails out of the box.",
+      overview: "SOP Executor is a platform that enables rapid development of SOP-native solutions for regulated industries. It provides a complete AI reasoning engine, SOP matching capabilities, and compliance guardrails out of the box.",
       features: [
         "AI-powered SOP matching and reasoning",
         "Multi-agent reasoning system with confidence scoring",
@@ -31,9 +47,9 @@ export const fabPlatforms = [
       ],
       architecture: {
         title: "Platform Architecture",
-        description: "SOP Navigator follows a modular, layered architecture that separates concerns between data, reasoning, and presentation layers, enabling rapid solution development.",
+        description: "SOP Executor follows a modular, layered architecture that separates concerns between data, reasoning, and presentation layers, enabling rapid solution development.",
         diagram: {
-          title: "SOP Navigator Architecture",
+          title: "SOP Executor Architecture",
           layers: [
             {
               name: "Presentation Layer",
@@ -161,7 +177,7 @@ export const SOPViewer = (props) => {
           {
             step: 1,
             title: "Define Your SOPs",
-            description: "Create SOP data structures in the format required by SOP Navigator. Include steps, denial codes, document references, and industry-specific metadata.",
+            description: "Create SOP data structures in the format required by SOP Executor. Include steps, denial codes, document references, and industry-specific metadata.",
             code: `// Example: src/data/sops.js
 export const SCENARIO_SOPS = {
   "your-scenario": {
@@ -227,5 +243,124 @@ function YourSolution({ item }) {
       },
     },
   },
+  {
+    id: "field-service",
+    name: "Field Service Platform",
+    tagline: "AI-powered field service management platform",
+    category: "Platform",
+    industry: "Cross-Industry",
+    status: "Live",
+    description:
+      "A reusable platform for building field service management solutions. Provides AI-powered routing optimization, technician scheduling, work order management, and SLA tracking across industries.",
+    highlights: ["Route optimization", "Scheduling AI", "Work order management", "SLA tracking", "Asset management", "Inventory integration"],
+    tags: ["Platform", "Cross-Industry", "Live", "Field Service"],
+    accent: "from-[#0EA5E9] to-[#3B82F6]",
+    statusColor: "bg-emerald-100 text-emerald-700",
+    categoryColor: "text-blue-500",
+    stack: ["Routing AI", "GPT-4", "Scheduling Engine", "Geospatial"],
+    documentation: {
+      overview: "Field Service Platform enables rapid development of field service management solutions. It provides intelligent routing, scheduling optimization, technician management, and SLA tracking out of the box.",
+      features: [
+        "AI-powered route optimization",
+        "Intelligent technician scheduling",
+        "Work order lifecycle management",
+        "Real-time SLA tracking",
+        "Technician skill matching",
+        "Geospatial routing and tracking",
+      ],
+      architecture: {
+        title: "Platform Architecture",
+        description: "Field Service Platform follows a modular architecture with data providers, AI services, and reusable components for rapid solution development.",
+        diagram: {
+          title: "Field Service Platform Architecture",
+          layers: [
+            {
+              name: "Presentation Layer",
+              components: ["WorkOrderCard", "ScheduleView", "TechnicianMap", "Solution-specific UI"],
+              description: "Reusable React components for field service interfaces",
+            },
+            {
+              name: "Platform Services Layer",
+              components: ["FieldServiceDataProvider", "Routing Agent", "Scheduling Agent", "Optimization Engine"],
+              description: "Core platform services for routing, scheduling, and optimization",
+            },
+            {
+              name: "Solution Adapter Layer",
+              components: ["platformAdapter.js", "Data Mappers"],
+              description: "Solution-specific adapters mapping domain data to platform models",
+            },
+            {
+              name: "Data Layer",
+              components: ["Work Orders", "Technicians", "Schedules", "Routes", "Configuration"],
+              description: "Solution-specific work orders, technicians, and scheduling data",
+            },
+          ],
+        },
+        components: [
+          {
+            name: "Field Service Data Provider",
+            description: "Abstracts access to field service data structures. Solutions provide their own work orders, technicians, and schedules which the platform consumes generically.",
+            code: `// Platform: src/platforms/field-service/core/fieldServiceDataProvider.js
+export class FieldServiceDataProvider {
+  constructor(serviceData) {
+    this.WORK_ORDERS = serviceData.WORK_ORDERS || [];
+    this.TECHNICIANS = serviceData.TECHNICIANS || [];
+    // Generic methods for field service data access
+  }
+}`,
+          },
+          {
+            name: "Routing & Scheduling Agents",
+            description: "AI agents optimize routes and schedules using GPT-4, considering technician skills, location, SLA constraints, and real-time availability.",
+            code: `// Platform: src/platforms/field-service/services/ai/agents.js
+const createFieldServiceAgents = (dataProvider) => {
+  return {
+    routingAgent: createRoutingAgent(dataProvider),
+    analyzeWorkOrder: analyzeWorkOrder,
+    optimizeSchedule: optimizeSchedule,
+  };
+};`,
+          },
+        ],
+        technology: {
+          title: "Technology Stack",
+          frontend: ["React 18", "Framer Motion", "Tailwind CSS", "Map Libraries"],
+          backend: ["Node.js / Express", "LangChain", "OpenAI GPT-4", "Routing Algorithms"],
+          ai: ["GPT-4", "Routing Optimization", "Scheduling AI", "Geospatial Intelligence"],
+          patterns: ["Platform-Solution Separation", "Adapter Pattern", "Component Composition"],
+        },
+      },
+      integration: {
+        title: "How to Build Solutions",
+        steps: [
+          {
+            step: 1,
+            title: "Define Your Work Orders",
+            description: "Create work order data structures with service types, priorities, locations, and SLA requirements.",
+          },
+          {
+            step: 2,
+            title: "Configure Technicians",
+            description: "Define technician profiles with skills, availability, and location data.",
+          },
+          {
+            step: 3,
+            title: "Integrate Platform Components",
+            description: "Use WorkOrderCard, ScheduleView, and routing components in your solution UI.",
+          },
+          {
+            step: 4,
+            title: "Customize for Your Industry",
+            description: "Adapt workflows, terminology, and features to match your industry requirements.",
+          },
+        ],
+      },
+    },
+  },
 ];
+
+// Export enriched platforms with calculated metrics
+export const getEnrichedPlatforms = () => {
+  return fabPlatforms.map((platform) => enrichPlatformWithMetrics(platform));
+};
 

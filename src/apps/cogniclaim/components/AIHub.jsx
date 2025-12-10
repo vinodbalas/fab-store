@@ -6,7 +6,8 @@ import SOPReferencePanel from "./SOPReferencePanel";
 import { SOPViewer } from "./platformComponents";
 
 export default function AIHub({ claim, onBack }) {
-  const [sopOpen, setSopOpen] = useState(false);     // Start collapsed
+  // Start with SOP panel closed; user can open when needed
+  const [sopOpen, setSopOpen] = useState(false);
   const [activeRefs, setActiveRefs] = useState([]); // e.g., ["3.2.1"]
   
   // SOP Viewer state
@@ -32,10 +33,10 @@ export default function AIHub({ claim, onBack }) {
         sopOpen={sopOpen}
       />
       
-      {/* Main content area with SOP drawer on right */}
-      <div className="flex flex-1 overflow-hidden relative">
-        {/* Main console - takes full width when SOP closed */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Main content area with SOP sidebar on right */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Main console - flexes to fill available space */}
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           <UnifiedAIConsole
             claim={claim}
             claimId={claim?.id}
@@ -44,12 +45,13 @@ export default function AIHub({ claim, onBack }) {
           />
         </div>
 
-        {/* SOP Reference Panel - Right side drawer (overlays when open) */}
+        {/* SOP Reference Panel - Resizable sidebar */}
         <SOPReferencePanel
           claim={claim}
           activeRefs={activeRefs}
           isOpen={sopOpen}
           onClose={() => setSopOpen(false)}
+          itemLabel="claim"
         />
       </div>
 

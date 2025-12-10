@@ -1,5 +1,5 @@
 /**
- * SOP Navigator Platform - AI Agents
+ * SOP Executor Platform - AI Agents
  * 
  * Multi-agent reasoning engine using LangChain
  * Platform-agnostic implementation that accepts SOP data via provider
@@ -355,22 +355,95 @@ ${JSON.stringify(state.reasoningSteps, null, 2)}`;
 
       if (!model) {
         let action = "PROCESS";
+        const item = state.item || {};
         let recommendationText;
+        let reasoningText;
         const hasDuplicateDenial = denialCodes.some(dc => dc.code === "CO-18");
+
+        const formatAmount = (val) =>
+          typeof val === "number" ? `$${val.toLocaleString()}` : val;
+
+        const itemLabel = (() => {
+          if (item.loanNumber || String(item.id || "").startsWith("LND-")) return "loan";
+          if (item.caseNumber || item.type === "Appeal") return "case";
+          return "claim";
+        })();
+
+        const idLabel = item.loanNumber || item.caseNumber || item.id || "this item";
+        const statusLabel = item.status || "In Process";
+        const amountLabel = item.amount || item.loanAmount;
+        const amountText = amountLabel ? `Amount: ${formatAmount(amountLabel)}. ` : "";
+
+        const denialSummary = denialCodes.length
+          ? `Key denial codes: ${denialCodes.map(d => `${d.code}${d.description ? ` (${d.description})` : ""}`).join(", ")}. `
+          : "No high-severity denial codes present. ";
+
+        const sopLabel = scenarioSOP
+          ? `${scenarioSOP.title}${scenarioSOP.page ? ` (${scenarioSOP.page}${scenarioSOP.state && scenarioSOP.state !== "All" ? `, ${scenarioSOP.state}` : ""})` : ""}`
+          : "applicable standard operating procedures";
 
         if (hasDuplicateDenial || scenario === "duplicate-claim-same-day" || scenario === "duplicate-claim-appeal") {
           action = "DENY";
-          recommendationText = "Deny duplicate claim and reference duplicate-claim SOP (CO-18).";
+          recommendationText = `Deny ${itemLabel} ${idLabel} as a true duplicate. ${amountText}Detected duplicate indicator CO-18 and matching service details; processing under the duplicate-claim rule. Apply denial per ${sopLabel} and document the linkage to the original ${itemLabel} for audit traceability.`;
+        } else if (scenario === "dti-bankruptcy-single" || scenario === "dti-bankruptcy-multiple") {
+          // Handle DTI with bankruptcy scenarios (used by TP Lend)
+          const frontEndDTI = item?.frontEndDTI;
+          const backEndDTI = item?.backEndDTI;
+          const bankruptcyHistory = item?.bankruptcyHistory;
+          const waitingPeriodSatisfied = bankruptcyHistory?.waitingPeriodSatisfied;
+          
+          if (!waitingPeriodSatisfied) {
+            action = "DENY";
+            recommendationText = `Deny loan ${idLabel} due to bankruptcy seasoning not met. Required waiting period is ${bankruptcyHistory?.waitingPeriodRequired || 4} years, but only ${bankruptcyHistory?.yearsSinceDischarge || "an unknown number of"} years have elapsed. Reference B3-5.3-07 for multiple bankruptcy filings and document the exception handling.`;
+          } else if (frontEndDTI && backEndDTI) {
+            // Check DTI thresholds
+            const dtiAcceptable = frontEndDTI <= 28 && backEndDTI <= 36;
+            const dtiWithCompensating = frontEndDTI <= 36 && backEndDTI <= 45 && item?.creditReestablishment?.onTimePayments;
+            
+            if (dtiAcceptable || dtiWithCompensating) {
+              action = "APPROVE";
+              const loanAmount = item?.loanAmount || "the requested amount";
+              recommendationText = `Approve loan ${idLabel} for ${formatAmount(loanAmount)} subject to final documentation. Front-end DTI is ${frontEndDTI.toFixed(2)}% and back-end DTI is ${backEndDTI.toFixed(2)}%, both inside the acceptable range for this profile given strong post-bankruptcy credit re-establishment. Base the decision on B3-6-02 (Debt-to-Income Ratios) and B3-5.3-07 (Bankruptcy Waiting Periods), and confirm income and asset documentation before clear-to-close.`;
+
+              const monthsSinceBk = item?.creditReestablishment?.monthsSinceBankruptcy;
+              const approxYearsSinceBk = monthsSinceBk ? (monthsSinceBk / 12).toFixed(1) : null;
+              const waitingRequired = bankruptcyHistory?.waitingPeriodRequired || 4;
+
+              reasoningText =
+                `• Front-end DTI ≈ ${frontEndDTI.toFixed(2)}% = monthly housing payment ÷ gross monthly income.\n` +
+                `• Back-end DTI ≈ ${backEndDTI.toFixed(2)}% = (housing payment + recurring debts) ÷ gross income.\n` +
+                `• Benchmarks from B3-6-02: standard guideline ≈ 28% front-end / 36% back-end; this file is comfortably below those limits.\n` +
+                `• Bankruptcy seasoning satisfied per B3-5.3-07 (${bankruptcyHistory?.count || 1} prior filing(s); required waiting period ${waitingRequired} years; actual ≈ ${approxYearsSinceBk || "≥ required"} years with re-established credit and on-time payments).`;
+            } else {
+              action = "DENY";
+              recommendationText = `Deny loan ${idLabel} due to excessive leverage. Calculated front-end DTI is ${frontEndDTI.toFixed(2)}% and back-end DTI is ${backEndDTI.toFixed(2)}%, exceeding the standard limits in B3-6-02 without sufficient compensating factors. Document the specific drivers (e.g., high revolving utilization or limited reserves) and reference B3-6-02 in the adverse action notice.`;
+            }
+          } else {
+            action = "PROCESS";
+            recommendationText = `Continue underwriting for loan ${idLabel} with a focus on validating DTI inputs. Confirm all income sources, recurring obligations, and any contingent liabilities before applying B3-6-02 and B3-5.3-07. Do not issue a final decision until updated documentation confirms ratios within tolerances.`;
+          }
         } else {
-          recommendationText = "Process item according to standard procedures.";
+          // Generic but richer fallback for standard claims/cases/loans
+          const contextBits = [];
+          if (item.member) contextBits.push(`member ${item.member}`);
+          if (item.borrower) contextBits.push(`borrower ${item.borrower}`);
+          if (item.provider) contextBits.push(`provider ${item.provider}`);
+          if (item.issueType) contextBits.push(`issue: ${item.issueType}`);
+
+          const contextText = contextBits.length
+            ? `Context: ${contextBits.join(" • ")}. `
+            : "";
+
+          recommendationText = `Process ${itemLabel} ${idLabel} under ${statusLabel} following ${sopLabel}. ${amountText}${contextText}${denialSummary}No material red flags were identified in the analysis, so proceed with standard workflow steps and monitoring in line with the referenced SOP.`;
         }
+
         const sopRefs = scenarioSOP?.documentReferences || ["3.2.1"];
 
         const newStep = {
           role: "ai-reco",
-          text: `Recommendation: ${recommendationText}${scenarioSOP ? ` See ${scenarioSOP.page || "SOP"}.` : ""}`,
+          text: `Recommendation: ${recommendationText}`,
           confidence: 0.89,
-          reasoning: `High confidence based on ${scenario ? `${scenario} scenario analysis` : "SOP compliance"}`,
+          reasoning: reasoningText || `High confidence based on ${scenario ? `${scenario} scenario analysis and alignment with ${sopLabel}` : `status (${statusLabel}) and SOP-based controls`}.\n\n${denialSummary}This recommendation assumes no additional adverse information beyond what is reflected in the current item snapshot.`,
           sopRefs: sopRefs,
           agent: "Recommender",
           denialCodes: denialCodes.map(dc => dc.code),
@@ -400,7 +473,9 @@ ${JSON.stringify(state.reasoningSteps, null, 2)}`;
 5. Confidence score
 6. Reasoning behind the recommendation
 ${scenario ? `7. Scenario-specific recommendations for: ${scenario}` : ""}
-${denialCodes.length > 0 ? `8. Denial codes if applicable: ${denialCodes.map(dc => `${dc.code} - ${dc.description}`).join(", ")}` : ""}`;
+${denialCodes.length > 0 ? `8. Denial codes if applicable: ${denialCodes.map(dc => `${dc.code} - ${dc.description}`).join(", ")}` : ""}
+${scenario?.includes("dti") ? `9. For DTI scenarios: Calculate and evaluate front-end DTI (housing payment/income) and back-end DTI (total obligations/income). Standard limits: 28% front-end, 36% back-end for conventional loans. Higher DTI may be acceptable with strong compensating factors.` : ""}
+${scenario?.includes("bankruptcy") ? `10. For bankruptcy scenarios: Verify waiting period satisfied (4 years for single, 5 years for multiple within 7 years per B3-5.3-07). Assess credit re-establishment and compensating factors.` : ""}`;
 
       const userPrompt = `Generate a recommendation for this item.
 Item: ${JSON.stringify(state.item, null, 2)}

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ngrok Test</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>Testing ngrok connection...</h1>
+    <div id="status">Loading...</div>
+    <script>
+        fetch('https://india-pikelike-margurite.ngrok-free.dev/')
+            .then(response => {
+                document.getElementById('status').innerHTML = 
+                    '✅ Success! Status: ' + response.status;
+            })
+            .catch(error => {
+                document.getElementById('status').innerHTML = 
+                    '❌ Error: ' + error.message;
+            });
+    </script>
+</body>
+</html>

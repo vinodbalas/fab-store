@@ -530,12 +530,36 @@ export default function UnifiedAIConsole({ onBind, onSOPReference, onSOPView, cl
     return sum / stepsWithConfidence.length;
   }, [engineMessages]);
   
+  const [lastAction, setLastAction] = useState(null);
+
   // Handler for action buttons
   const handleAction = useCallback((actionType, recommendation) => {
     console.log("Action taken:", actionType, recommendation);
-    // TODO: Implement action handler (e.g., update claim status, send notification)
-    alert(`Action: ${actionType}\n\nThis would ${actionType === "approve" ? "approve" : actionType === "deny" ? "deny" : "request information for"} the claim.`);
+    setLastAction({
+      type: actionType,
+      label:
+        actionType === "approve"
+          ? "Approve"
+          : actionType === "deny"
+          ? "Deny"
+          : actionType === "request"
+          ? "Request information"
+          : "Review",
+      message:
+        actionType === "approve"
+          ? "This would approve the claim in a real environment (no changes made in demo mode)."
+          : actionType === "deny"
+          ? "This would deny/close the claim in a real environment (no changes made in demo mode)."
+          : "This would trigger a follow-up / information request in a real environment.",
+    });
   }, []);
+
+  // Auto-dismiss action toast after 2.5s
+  useEffect(() => {
+    if (!lastAction) return;
+    const timer = setTimeout(() => setLastAction(null), 2500);
+    return () => clearTimeout(timer);
+  }, [lastAction]);
   
   return (
     <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950">
@@ -550,7 +574,7 @@ export default function UnifiedAIConsole({ onBind, onSOPReference, onSOPView, cl
             transition={{ delay: 0.2 }}
             className="flex flex-col gap-4"
           >
-          {/* Section Header - AI Watchtower */}
+          {/* Section Header - AI Reasoning */}
           <div className="relative flex items-center gap-3 pb-3 mb-2">
             {/* Gradient border effect */}
             <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#612D91] via-[#A64AC9] to-[#612D91] rounded-full"></div>
@@ -560,10 +584,10 @@ export default function UnifiedAIConsole({ onBind, onSOPReference, onSOPView, cl
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-xl font-bold bg-gradient-to-r from-[#612D91] to-[#A64AC9] bg-clip-text text-transparent">
-                AI Watchtower
+                AI Reasoning
               </h2>
               <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                Multi-agent reasoning console powered by SOP Navigator
+                Multi-agent reasoning console powered by SOP Executor
               </p>
             </div>
             {avgConfidence && (
@@ -750,6 +774,38 @@ export default function UnifiedAIConsole({ onBind, onSOPReference, onSOPView, cl
           <p className="text-xs text-gray-500 dark:text-gray-400 ml-[58px]">Press Enter to send</p>
         </div>
       </div>
+
+      {/* Action toast */}
+      {lastAction && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          className="fixed top-20 right-6 max-w-sm z-40"
+        >
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl px-4 py-3 flex items-start gap-3">
+            <div className="mt-1">
+              <Sparkles className="w-4 h-4 text-[#612D91] dark:text-[#A64AC9]" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between gap-3 mb-1">
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {lastAction.label} (demo only)
+                </span>
+                <button
+                  onClick={() => setLastAction(null)}
+                  className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  Close
+                </button>
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-300">
+                {lastAction.message}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }

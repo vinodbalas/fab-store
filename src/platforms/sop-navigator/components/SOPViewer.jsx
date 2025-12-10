@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
  * Accepts SOP data via sopProvider prop
  */
 export default function SOPViewer({ sopId, stepIndex = null, onClose, itemStatus = null, scenario = null, sopProvider }) {
+  // currentPage is the viewer page index (1..N), not the original SOP "Page 30" number
   const [currentPage, setCurrentPage] = useState(1);
   const [highlightedStep, setHighlightedStep] = useState(stepIndex);
   const [searchTerm, setSearchTerm] = useState("");
@@ -18,23 +19,59 @@ export default function SOPViewer({ sopId, stepIndex = null, onClose, itemStatus
   const getSOPData = () => {
     if (!sopProvider) return null;
     
-    if (scenario) {
-      return sopProvider.lookupSOPByScenario(scenario);
-    } else if (itemStatus) {
-      return sopProvider.lookupSOPByStatus(itemStatus);
-    } else if (sopId) {
-      // Try to find in scenario SOPs
-      const scenarioSOPs = sopProvider.getScenarioSOPs();
-      const scenarioSOP = scenarioSOPs[sopId];
-      if (scenarioSOP) return scenarioSOP;
-      
-      // Try to find in status SOPs
-      const sopIndex = sopProvider.getSOPIndex();
-      const statusSOP = Object.values(sopIndex).find(sop => 
-        sop.title.toLowerCase().includes(sopId.toLowerCase())
-      );
-      if (statusSOP) return statusSOP;
+    const scenarioSOPs = sopProvider.getScenarioSOPs();
+    const sopIndex = sopProvider.getSOPIndex();
+
+    // 1) Explicit scenario passed in
+    if (scenario && scenarioSOPs[scenario]) {
+      return scenarioSOPs[scenario];
     }
+
+    // 2) Status-based SOP
+    if (itemStatus && sopIndex[itemStatus]) {
+      return sopIndex[itemStatus];
+    }
+
+    // 3) ID / reference string
+    if (sopId) {
+      // 3a) Direct scenario key match (e.g., "duplicate-claim-same-day")
+      if (scenarioSOPs[sopId]) {
+        return scenarioSOPs[sopId];
+      }
+
+      // 3b) Direct status key match in SOP_INDEX (e.g., "Pending Review")
+      if (sopIndex[sopId]) {
+        return sopIndex[sopId];
+      }
+
+      // 3c) "Page XX" style reference – map to scenario SOP whose page includes that number
+      const pageMatch = sopId.match(/page\s*(\d+)/i);
+      if (pageMatch) {
+        const pageNumber = pageMatch[1];
+        const fromScenarioPage = Object.values(scenarioSOPs).find((sop) =>
+          sop.page && sop.page.toLowerCase().includes(pageNumber)
+        );
+        if (fromScenarioPage) return fromScenarioPage;
+      }
+
+      // 3d) Try matching by SOP title substring (fallback for things like "Duplicate Claim SOP")
+      const lowerId = sopId.toLowerCase();
+      const byTitle =
+        Object.values(sopIndex).find((sop) => sop.title?.toLowerCase().includes(lowerId)) ||
+        Object.values(scenarioSOPs).find((sop) => sop.title?.toLowerCase().includes(lowerId));
+      if (byTitle) return byTitle;
+    }
+
+    // 4) Demo-safe fallback: return the first available SOP so the viewer always shows something
+    const allStatusSOPs = Object.values(sopIndex);
+    if (allStatusSOPs.length > 0) {
+      return allStatusSOPs[0];
+    }
+    const allScenarioSOPs = Object.values(scenarioSOPs);
+    if (allScenarioSOPs.length > 0) {
+      return allScenarioSOPs[0];
+    }
+
     return null;
   };
 
@@ -145,8 +182,9 @@ export default function SOPViewer({ sopId, stepIndex = null, onClose, itemStatus
     );
   }
 
-  const currentPageData = document.pages.find(p => p.pageNumber === currentPage) || document.pages[0];
   const totalPages = document.pages.length;
+  const currentPageIndex = Math.min(Math.max(currentPage, 1), totalPages);
+  const currentPageData = document.pages[currentPageIndex - 1] || document.pages[0];
   const [pageInput, setPageInput] = useState(String(currentPage));
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -164,9 +202,9 @@ export default function SOPViewer({ sopId, stepIndex = null, onClose, itemStatus
   // Handle page input submit
   const handlePageInputSubmit = (e) => {
     if (e.key === 'Enter' || e.type === 'blur') {
-      const pageNum = parseInt(pageInput);
-      if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
-        setCurrentPage(pageNum);
+      const pageIdx = parseInt(pageInput);
+      if (!isNaN(pageIdx) && pageIdx >= 1 && pageIdx <= totalPages) {
+        setCurrentPage(pageIdx);
       } else {
         setPageInput(String(currentPage));
       }
@@ -204,11 +242,11 @@ export default function SOPViewer({ sopId, stepIndex = null, onClose, itemStatus
   const navigateToStep = (stepNum) => {
     setHighlightedStep(stepNum - 1);
     // Ensure we're on the correct page that contains this step
-    const targetPage = document.pages.find(p => 
+    const targetIndex = document.pages.findIndex(p =>
       p.content.steps.some(s => s.stepNumber === stepNum)
     );
-    if (targetPage) {
-      setCurrentPage(targetPage.pageNumber);
+    if (targetIndex !== -1) {
+      setCurrentPage(targetIndex + 1);
     }
     
     // Scroll to step after page change
@@ -227,11 +265,11 @@ export default function SOPViewer({ sopId, stepIndex = null, onClose, itemStatus
   useEffect(() => {
     if (stepIndex !== null && document) {
       const stepNum = stepIndex + 1;
-      const targetPage = document.pages.find(p => 
+      const targetIndex = document.pages.findIndex(p =>
         p.content.steps.some(s => s.stepNumber === stepNum)
       );
-      if (targetPage) {
-        setCurrentPage(targetPage.pageNumber);
+      if (targetIndex !== -1) {
+        setCurrentPage(targetIndex + 1);
       }
     }
   }, [stepIndex, document]);
@@ -328,7 +366,12 @@ export default function SOPViewer({ sopId, stepIndex = null, onClose, itemStatus
           <div className="max-w-4xl mx-auto bg-white dark:bg-gray-900 shadow-lg rounded-lg p-8 min-h-full relative">
             {/* Page Indicator - Top Right */}
             <div className="absolute top-4 right-4 text-xs text-gray-500 dark:text-gray-400">
-              Page {currentPageData.pageNumber} of {totalPages}
+              Page {currentPageIndex} of {totalPages}
+              {currentPageData?.pageNumber && (
+                <span className="ml-2 text-[11px] text-gray-400">
+                  (SOP page {currentPageData.pageNumber})
+                </span>
+              )}
             </div>
 
             {/* Page Content */}

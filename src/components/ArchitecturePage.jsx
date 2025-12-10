@@ -78,13 +78,13 @@ export default function ArchitecturePage({ onBack }) {
       description:
         "Front-end surfaces for each application: dashboards, worklists, AI consoles, and SOP viewers.",
       bullets: [
-        "Cogniclaim UI: claims dashboards, worklists, AI Watchtower, SOP Viewer",
-        "TP Resolve UI: case dashboards, deadline tracker, AI Watchtower",
+        "Cogniclaim UI: claims dashboards, worklists, AI Reasoning, SOP Viewer",
+        "TP Resolve Appeals UI: case dashboards, deadline tracker, AI Reasoning",
         "Shared visual language and components across solutions",
       ],
       details: [
         "Explain that every solution UI is opinionated for its end‑user (claims examiners, grievance specialists, etc.).",
-        "Point out AI Watchtower and SOP Viewer as consistent, reusable elements across UIs.",
+        "Point out AI Reasoning and SOP Viewer as consistent, reusable elements across UIs.",
       ],
     },
     {
@@ -94,14 +94,14 @@ export default function ArchitecturePage({ onBack }) {
       status: "Built",
       icon: Code,
       description:
-        "Domain-specific applications (Cogniclaim, TP Resolve) that implement industry workflows on top of platforms.",
+        "Domain-specific applications (Cogniclaim, TP Resolve Appeals) that implement industry workflows on top of platforms.",
       bullets: [
         "Cogniclaim: medical claims intelligence for payers",
-        "TP Resolve: appeals & grievances resolution for regulated plans",
+        "TP Resolve Appeals: appeals & grievances resolution for regulated plans",
         "Adapters connect solution data models (claims/cases) to platform services",
       ],
       details: [
-        "Make clear that Cogniclaim and TP Resolve are examples of vertical solutions built on a shared stack.",
+        "Make clear that Cogniclaim and TP Resolve Appeals are examples of vertical solutions built on a shared stack.",
         "Highlight that adapters mean a new solution can plug in its own data model but reuse the same AI and SOP capabilities.",
       ],
     },
@@ -126,18 +126,18 @@ export default function ArchitecturePage({ onBack }) {
     {
       id: "platform",
       name: "Platform Layer",
-      subtitle: "Reusable Platforms (SOP Navigator)",
+      subtitle: "Reusable Platforms (SOP Executor)",
       status: "Built",
       icon: Layers,
       description:
         "Reusable platforms that expose generic capabilities (SOP reasoning, viewers, components) to any solution.",
       bullets: [
-        "SOP Navigator: SOP-native platform used by Cogniclaim & TP Resolve",
+        "SOP Executor: SOP-native platform used by Cogniclaim & TP Resolve Appeals",
         "Shared components: ReasoningCard, SOPViewer, UnifiedAIConsole",
         "Adapter pattern keeps platforms decoupled from solution specifics",
       ],
       details: [
-        "Use this to reinforce that SOP Navigator is a first platform offering – more can be added like Field Service, Collections, etc.",
+        "Use this to reinforce that SOP Executor is a first platform offering – more can be added like Field Service, Collections, etc.",
         "Emphasize that platform components and services can be reused by any new solution without re‑implementing AI logic.",
       ],
     },
@@ -241,7 +241,7 @@ export default function ArchitecturePage({ onBack }) {
       label: "Faster Time to Market",
       icon: Clock,
       details: [
-        "Platform-first approach reuses AI & SOP capabilities",
+        "Platform-first approach reuses AI & SOP capabilities (SOP Executor)",
         "Pre-built Reasoning, Viewer, and Store surfaces",
         "New solutions inherit platform behavior instead of starting from zero",
       ],
@@ -261,7 +261,7 @@ export default function ArchitecturePage({ onBack }) {
       label: "Solutions per Platform",
       icon: TrendingUp,
       details: [
-        "Today: Cogniclaim + TP Resolve on SOP Navigator",
+        "Today: Cogniclaim + TP Resolve Appeals on SOP Executor",
         "Field Service / other verticals can be added quickly",
         "Clear blueprint for reusing agentic + SOP stack",
       ],
@@ -271,7 +271,7 @@ export default function ArchitecturePage({ onBack }) {
       label: "AI-Powered",
       icon: Brain,
       details: [
-        "Every solution instrumented with AI Watchtower",
+        "Every solution instrumented with AI Reasoning",
         "Multi-agent reasoning on every claim/case line item",
         "Explainable recommendations tied back to SOPs",
       ],
@@ -454,11 +454,11 @@ export default function ArchitecturePage({ onBack }) {
                                         Platforms
                                       </div>
                                       <p className="text-[11px] md:text-xs text-gray-600 mb-1">
-                                        Reusable engines (like SOP Navigator) that multiple applications can build on.
+                                        Reusable engines (like SOP Executor) that multiple applications can build on.
                                       </p>
                                       <div className="flex flex-wrap gap-1.5">
                                         <span className="px-2.5 py-1 rounded-full bg-white text-indigo-700 text-[11px] md:text-xs font-semibold border border-indigo-200">
-                                          SOP Navigator
+                                          SOP Executor
                                         </span>
                                         <span className="px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-800 text-[11px] md:text-xs font-semibold border border-indigo-200">
                                           Platform 2 (Field Service)
@@ -519,7 +519,7 @@ export default function ArchitecturePage({ onBack }) {
                       <div className="text-[11px] md:text-xs text-gray-600 text-right">
                         <div>
                           <span className="font-semibold">Current platform:</span>{" "}
-                          SOP Navigator
+                          SOP Executor
                         </div>
                         <div>
                           <span className="font-semibold">Models:</span>{" "}
@@ -1063,7 +1063,7 @@ export default function ArchitecturePage({ onBack }) {
                     Platform ROI & Value
                   </h2>
                   <p className="text-base md:text-lg text-gray-600">
-                    How FAB Store + SOP Navigator translate into measurable business outcomes.
+                    How FAB Store + SOP Executor translate into measurable business outcomes.
                   </p>
                 </div>
 

@@ -161,17 +161,20 @@ export default function ClaimDetailsPanel({ claim, onClose }) {
           <a href={insights.ref} target="_blank" rel="noreferrer" className="text-xs underline text-[#612D91]">
             View SOP reference
           </a>
-          <div className="pt-3">
+          <div className="pt-3 flex items-center gap-2">
             <button
               onClick={() => {
                 // In the real app, this will POST to your backend to accept the recommendation
-                alert("Action recorded (demo)");
+                console.log("AI insight accepted (demo)");
               }}
               className="px-3 py-2 text-sm rounded-md text-white"
               style={{ backgroundColor: "#612D91" }}
             >
               Accept Recommendation
             </button>
+            <span className="text-[11px] text-gray-500 dark:text-gray-400">
+              Demo only – no real action taken
+            </span>
           </div>
         </div>
       )}
