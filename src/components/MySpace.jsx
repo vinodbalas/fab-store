@@ -5,8 +5,20 @@ import { useAuth } from "../auth/AuthContext";
 import { usePermissions } from "../hooks/usePermissions";
 
 export default function MySpace({ onLaunchBuilder, onEditApp, onViewApp }) {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const permissions = usePermissions();
+
+  // Check authentication first
+  if (!isAuthenticated) {
+    return (
+      <div className="px-4 md:px-10 py-8">
+        <div className="rounded-[32px] bg-white/95 border border-white/40 shadow-[0_45px_85px_rgba(15,10,45,0.15)] p-6 md:p-10 text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Sign In Required</h2>
+          <p className="text-gray-600">Please sign in to access My Space.</p>
+        </div>
+      </div>
+    );
+  }
 
   // Redirect if no access
   if (!permissions.canAccessMySpace) {

@@ -20,13 +20,17 @@ export default function StoreFooter({ onNavigate }) {
       "Flexible payments",
       "Policies and Code of Conduct",
       "Request a FAB Store demo",
+      { label: "Knowledge Hub", key: "knowledge-hub" },
+      { label: "Pricing", key: "pricing" },
     ],
     "For Builders": [
       "Publish your solution",
       "Generate your app badge",
-      "FAB Builder",
+      { label: "FAB Builder", key: "builder-detail" },
+      { label: "Templates", key: "templates" },
       "API documentation",
-      "Architecture Overview",
+      { label: "Architecture Overview", key: "architecture" },
+      { label: "Platforms Hub", key: "platforms-hub" },
     ],
     "TP.ai": [
       "About TP.ai (Teleperformance AI)",
@@ -63,22 +67,32 @@ export default function StoreFooter({ onNavigate }) {
                 {title}
               </h3>
               <ul className="space-y-2">
-                {links.map((link) => (
-                  <li key={link}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (link === "Architecture Overview" && onNavigate) {
-                          onNavigate("architecture");
-                        }
-                      }}
-                      className="text-sm text-[#96ABFF] hover:text-white transition-colors flex items-center gap-2"
-                    >
-                      {link === "Architecture Overview" && <Layers className="w-3 h-3" />}
-                      {link}
-                    </button>
-                  </li>
-                ))}
+                {links.map((link) => {
+                  const linkObj = typeof link === "object" ? link : { label: link, key: null };
+                  const isClickable = linkObj.key !== null;
+                  
+                  return (
+                    <li key={linkObj.label}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isClickable && onNavigate) {
+                            onNavigate(linkObj.key);
+                          }
+                        }}
+                        className={`text-sm transition-colors flex items-center gap-2 ${
+                          isClickable
+                            ? "text-[#96ABFF] hover:text-white cursor-pointer"
+                            : "text-[#96ABFF]/70 cursor-default"
+                        }`}
+                        disabled={!isClickable}
+                      >
+                        {(linkObj.key === "architecture" || linkObj.key === "platforms-hub" || linkObj.key === "knowledge-hub" || linkObj.key === "builder-detail") && <Layers className="w-3 h-3" />}
+                        {linkObj.label}
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}

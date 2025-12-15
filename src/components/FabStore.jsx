@@ -9,6 +9,11 @@ import PlatformDetail from "./PlatformDetail";
 import TemplateCloner from "./TemplateCloner";
 import MySpace from "./MySpace";
 import AppBuilder from "./AppBuilder";
+import BuilderDetailPage from "./BuilderDetailPage";
+import PlatformsHub from "./PlatformsHub";
+import KnowledgeHub from "./KnowledgeHub";
+import PricingPage from "./PricingPage";
+import ArchitecturePage from "./ArchitecturePage";
 import { useAuth } from "../auth/AuthContext";
 import { usePermissions } from "../hooks/usePermissions";
 import RoleSwitcher from "./RoleSwitcher";
@@ -21,6 +26,7 @@ const sortOptions = [
 const statusPriority = { Live: 0, Preview: 1, Beta: 2, "Coming Soon": 3 };
 
 function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
+  const { isAuthenticated } = useAuth();
   const permissions = usePermissions();
   const [search, setSearch] = useState("");
   const [industry, setIndustry] = useState("All");
@@ -44,6 +50,12 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
   });
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingApp, setEditingApp] = useState(null);
+  const [showBuilderDetail, setShowBuilderDetail] = useState(false);
+  const [showPlatformsHub, setShowPlatformsHub] = useState(false);
+  const [showKnowledgeHub, setShowKnowledgeHub] = useState(false);
+  const [showPricing, setShowPricing] = useState(false);
+  const [showArchitecture, setShowArchitecture] = useState(false);
+  const [mySpaceVersion, setMySpaceVersion] = useState(0);
 
   const industries = useMemo(() => {
     // Curated list of key industries, enriched from actual apps and templates
@@ -160,8 +172,50 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
   }, [modalCategory, modalModality]);
 
   const handleSectionNavigate = (target) => {
-    setActiveNav(target);
-    setSelectedPlatform(null);
+    if (target === "builder-detail") {
+      setShowBuilderDetail(true);
+      setActiveNav("builder-detail");
+      setShowPlatformsHub(false);
+      setShowKnowledgeHub(false);
+      setShowPricing(false);
+      setShowArchitecture(false);
+    } else if (target === "platforms-hub") {
+      setShowPlatformsHub(true);
+      setActiveNav("platforms-hub");
+      setShowBuilderDetail(false);
+      setShowKnowledgeHub(false);
+      setShowPricing(false);
+      setShowArchitecture(false);
+    } else if (target === "knowledge-hub") {
+      setShowKnowledgeHub(true);
+      setActiveNav("knowledge-hub");
+      setShowBuilderDetail(false);
+      setShowPlatformsHub(false);
+      setShowPricing(false);
+      setShowArchitecture(false);
+    } else if (target === "pricing") {
+      setShowPricing(true);
+      setActiveNav("pricing");
+      setShowBuilderDetail(false);
+      setShowPlatformsHub(false);
+      setShowKnowledgeHub(false);
+      setShowArchitecture(false);
+    } else if (target === "architecture") {
+      setShowArchitecture(true);
+      setActiveNav("architecture");
+      setShowBuilderDetail(false);
+      setShowPlatformsHub(false);
+      setShowKnowledgeHub(false);
+      setShowPricing(false);
+    } else {
+      setActiveNav(target);
+      setSelectedPlatform(null);
+      setShowBuilderDetail(false);
+      setShowPlatformsHub(false);
+      setShowKnowledgeHub(false);
+      setShowPricing(false);
+      setShowArchitecture(false);
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -226,7 +280,22 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-xs font-semibold uppercase tracking-[0.35em] text-[#5C36C8]">AI Platforms</div>
-                        <p className="text-sm text-gray-600 mt-1">Enterprise-grade AI platforms that accelerate application development with intelligent reasoning, orchestration, and compliance</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Enterprise-grade AI platforms that accelerate application development with intelligent reasoning, orchestration, and compliance. 
+                          Build once, deploy across industries with reusable infrastructure and components.
+                        </p>
+                        <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                          <span>2 Live Platforms</span>
+                          <span>•</span>
+                          <span>5 Solutions Built</span>
+                          <span>•</span>
+                          <button
+                            onClick={() => handleSectionNavigate("platforms-hub")}
+                            className="text-[#612D91] hover:text-[#7B3DA1] font-medium transition-colors"
+                          >
+                            Learn More →
+                          </button>
+                        </div>
                       </div>
                       <button
                         onClick={() => handleSectionNavigate("platforms")}
@@ -251,7 +320,15 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
                 <div className="rounded-[32px] bg-white/95 border border-white/40 shadow-[0_45px_85px_rgba(15,10,45,0.15)] p-6 md:p-10 space-y-6 backdrop-blur">
                   <div className="flex flex-col gap-3">
                     <div className="text-xs font-semibold uppercase tracking-[0.35em] text-[#5C36C8]">Applications</div>
-                    <p className="text-sm text-gray-600">AI-native applications built on our enterprise platforms—ready to deploy or customize for your organization</p>
+                    <p className="text-sm text-gray-600">
+                      AI-native applications built on our enterprise platforms—ready to deploy or customize for your organization. 
+                      All applications include AI Watchtower for intelligent reasoning, SOP compliance, and audit trails.
+                    </p>
+                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <span>5 Live Applications</span>
+                      <span>•</span>
+                      <span>Healthcare, Financial Services, Field Service</span>
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       <FilterPill label="Industry" activeValue={industry} options={industries} onSelect={setIndustry} />
                       <SortSelect value={sort} onChange={setSort} />
@@ -422,12 +499,15 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
             <PlatformDetail platform={selectedPlatform} onBack={handlePlatformBack} onLaunch={onLaunch} readOnly={readOnly} onRequestLogin={onRequestLogin} />
           )}
 
-          {activeNav === "myspace" && permissions.canAccessMySpace && (
+          {activeNav === "myspace" && isAuthenticated && permissions.canAccessMySpace && (
             <MySpace
+              key={mySpaceVersion}
               onLaunchBuilder={() => {
-                if (permissions.canAccessAppBuilder) {
+                if (isAuthenticated && permissions.canAccessAppBuilder) {
                   setShowBuilder(true);
                   setEditingApp(null);
+                } else {
+                  onRequestLogin?.();
                 }
               }}
               onEditApp={(app) => {
@@ -444,7 +524,7 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
             />
           )}
 
-          {showBuilder && permissions.canAccessAppBuilder && (
+          {showBuilder && isAuthenticated && permissions.canAccessAppBuilder && (
             <AppBuilder
               app={editingApp}
               onClose={() => {
@@ -465,6 +545,8 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
                   userApps.push(appToSave);
                 }
                 localStorage.setItem("fabStore.userApps", JSON.stringify(userApps));
+                // Force MySpace to remount and pick up latest apps
+                setMySpaceVersion((v) => v + 1);
                 setShowBuilder(false);
                 setEditingApp(null);
                 if (activeNav !== "myspace") {
@@ -475,21 +557,145 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
           )}
 
           {activeNav === "about" && (
-            <section className="px-4 md:px-10">
-              <div className="rounded-[32px] bg-white/95 border border-white/40 shadow-[0_35px_85px_rgba(15,10,45,0.12)] p-8 space-y-4 backdrop-blur text-gray-700">
-                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[#5C36C8]">About FAB Store</p>
-                <h2 className="text-3xl font-semibold text-gray-900">Operational AI built with guardrails</h2>
-                <p>
-                  Teleperformance FAB is an enterprise AI platform that combines human-centered operations knowledge with intelligent orchestration. Build applications faster with our AI-native platforms, reusable models, and production-ready templates—all with built-in compliance and SOP-native guardrails.
+            <section className="px-4 md:px-10 space-y-6">
+              <div className="rounded-[32px] bg-white/95 border border-white/40 shadow-[0_35px_85px_rgba(15,10,45,0.12)] p-8 space-y-6 backdrop-blur">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[#5C36C8]">About FAB Store</p>
+                  <h2 className="text-3xl font-semibold text-gray-900 mt-2">Operational AI built with guardrails</h2>
+                </div>
+                <p className="text-gray-700 leading-relaxed">
+                  Teleperformance FAB is an enterprise AI platform that combines human-centered operations knowledge with intelligent orchestration. 
+                  Build applications faster with our AI-native platforms, reusable models, and production-ready templates—all with built-in 
+                  compliance and SOP-native guardrails.
                 </p>
-                <p className="text-sm text-gray-500">
-                  Need more detail? Reach out via Request Demo and we’ll line up a deep dive.
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+                  <div className="p-6 rounded-xl bg-gradient-to-br from-[#612D91]/5 to-[#A64AC9]/5 border border-[#612D91]/20">
+                    <div className="text-3xl font-bold text-[#612D91] mb-2">5</div>
+                    <div className="text-sm font-medium text-gray-700">Live Applications</div>
+                    <div className="text-xs text-gray-500 mt-1">Production-ready solutions</div>
+                  </div>
+                  <div className="p-6 rounded-xl bg-gradient-to-br from-[#612D91]/5 to-[#A64AC9]/5 border border-[#612D91]/20">
+                    <div className="text-3xl font-bold text-[#612D91] mb-2">2</div>
+                    <div className="text-sm font-medium text-gray-700">AI Platforms</div>
+                    <div className="text-xs text-gray-500 mt-1">SOP Executor & Field Service</div>
+                  </div>
+                  <div className="p-6 rounded-xl bg-gradient-to-br from-[#612D91]/5 to-[#A64AC9]/5 border border-[#612D91]/20">
+                    <div className="text-3xl font-bold text-[#612D91] mb-2">67</div>
+                    <div className="text-sm font-medium text-gray-700">Builder Components</div>
+                    <div className="text-xs text-gray-500 mt-1">Low-code/no-code platform</div>
+                  </div>
+                </div>
+
+                <div className="mt-8 pt-8 border-t border-gray-200">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Key Capabilities</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-[#612D91] mt-2 shrink-0" />
+                      <div>
+                        <div className="font-medium text-gray-900">AI-Native Platforms</div>
+                        <div className="text-sm text-gray-600">Reusable infrastructure with built-in AI reasoning, compliance, and orchestration</div>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-[#612D91] mt-2 shrink-0" />
+                      <div>
+                        <div className="font-medium text-gray-900">Low-Code/No-Code Builder</div>
+                        <div className="text-sm text-gray-600">Visual app builder with 67 components and AI-powered generation</div>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-[#612D91] mt-2 shrink-0" />
+                      <div>
+                        <div className="font-medium text-gray-900">Role-Based Access</div>
+                        <div className="text-sm text-gray-600">Admin, Developer, and User personas with granular permissions</div>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-[#612D91] mt-2 shrink-0" />
+                      <div>
+                        <div className="font-medium text-gray-900">Production-Ready Templates</div>
+                        <div className="text-sm text-gray-600">Clone battle-tested applications and customize for your needs</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-sm text-gray-500 mt-6">
+                  Need more detail? Reach out via Request Demo and we'll line up a deep dive.
                 </p>
               </div>
             </section>
           )}
+
+          {(activeNav === "builder-detail" || showBuilderDetail) && (
+            <>
+              {isAuthenticated ? (
+                <BuilderDetailPage 
+                  onBack={() => {
+                    setShowBuilderDetail(false);
+                    handleSectionNavigate("store");
+                  }} 
+                />
+              ) : (
+                <div className="px-4 md:px-10 py-8">
+                  <div className="rounded-[32px] bg-white/95 border border-white/40 shadow-[0_45px_85px_rgba(15,10,45,0.15)] p-6 md:p-10 text-center">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Sign In Required</h2>
+                    <p className="text-gray-600 mb-6">Please sign in to access the FAB Builder.</p>
+                    <button
+                      onClick={() => {
+                        setShowBuilderDetail(false);
+                        onRequestLogin?.();
+                      }}
+                      className="px-6 py-3 bg-[#612D91] text-white rounded-lg font-semibold hover:bg-[#7B3DA1] transition"
+                    >
+                      Sign In
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {(activeNav === "platforms-hub" || showPlatformsHub) && (
+            <PlatformsHub 
+              onBack={() => {
+                setShowPlatformsHub(false);
+                handleSectionNavigate("store");
+              }} 
+              onNavigate={handleSectionNavigate}
+            />
+          )}
+
+          {(activeNav === "knowledge-hub" || showKnowledgeHub) && (
+            <KnowledgeHub 
+              onBack={() => {
+                setShowKnowledgeHub(false);
+                handleSectionNavigate("store");
+              }} 
+              onNavigate={handleSectionNavigate}
+            />
+          )}
+
+          {(activeNav === "pricing" || showPricing) && (
+            <PricingPage 
+              onBack={() => {
+                setShowPricing(false);
+                handleSectionNavigate("store");
+              }}
+            />
+          )}
+
+          {(activeNav === "architecture" || showArchitecture) && (
+            <ArchitecturePage 
+              onBack={() => {
+                setShowArchitecture(false);
+                handleSectionNavigate("store");
+              }}
+            />
+          )}
       </div>
-      <StoreFooter onNavigate={onNavigate} />
+      <StoreFooter onNavigate={handleSectionNavigate} />
       <DemoRequestModal open={showDemoForm} onClose={() => setShowDemoForm(false)} />
       {cloningTemplate && (
         <TemplateCloner
@@ -516,6 +722,7 @@ function TopNav({ search, onSearchChange, readOnly, onRequestLogin, onRequestDem
     { label: "Platforms", key: "platforms" },
     ...(permissions.canCloneTemplates ? [{ label: "Templates", key: "templates" }] : []),
     ...(permissions.canAccessMySpace ? [{ label: "My Space", key: "myspace" }] : []),
+    { label: "Pricing", key: "pricing" },
     { label: "About", key: "about" },
   ];
   return (

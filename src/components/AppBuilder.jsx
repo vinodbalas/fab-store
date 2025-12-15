@@ -6,20 +6,96 @@
  */
 
 import { useState, useEffect, useRef } from "react";
+import { createRoot } from "react-dom/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  X, Save, Eye, Sparkles, Layers, Database, Zap, Palette, Code, ChevronRight,
-  Plus, Trash2, Copy, Settings, Brain, Lightbulb, Wand2, ChevronDown, ChevronUp,
-  FileText, Grid, Layout, Component, Search, Monitor, Tablet, Smartphone,
-  Split, Maximize2, Minimize2, FilePlus, Edit, Move, AlignLeft, AlignCenter,
-  AlignRight, Bold, Italic, Link, Image, Video, Type, Hash, Calendar, Mail,
-  Phone, MapPin, CreditCard, User, Lock, Unlock, CheckSquare, Radio, ToggleLeft,
-  Check, BarChart3, PieChart, LineChart, TrendingUp, Upload, Tag, Badge,
-  AlertCircle, CheckCircle, Loader2, Clock, Bell, Sliders, GripVertical,
-  GripHorizontal, Menu, ArrowRight, ChevronLeft, Circle, Square, List, Sidebar, Star, Folder
+  X,
+  Save,
+  Eye,
+  Sparkles,
+  Layers,
+  Database,
+  Zap,
+  Palette,
+  Code,
+  ChevronRight,
+  Plus,
+  Trash2,
+  Copy,
+  Settings,
+  Brain,
+  Lightbulb,
+  Wand2,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  Grid,
+  Layout,
+  Component,
+  Search,
+  Monitor,
+  Tablet,
+  Smartphone,
+  Split,
+  Maximize2,
+  Minimize2,
+  FilePlus,
+  Edit,
+  Move,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Bold,
+  Italic,
+  Link,
+  Image,
+  Video,
+  Type,
+  Hash,
+  Calendar,
+  Mail,
+  Phone,
+  MapPin,
+  CreditCard,
+  User,
+  Lock,
+  Unlock,
+  CheckSquare,
+  Radio,
+  ToggleLeft,
+  Check,
+  BarChart3,
+  PieChart,
+  LineChart,
+  TrendingUp,
+  Upload,
+  Tag,
+  Badge,
+  AlertCircle,
+  CheckCircle,
+  Loader2,
+  Clock,
+  Bell,
+  Sliders,
+  GripVertical,
+  GripHorizontal,
+  Menu,
+  ArrowRight,
+  ChevronLeft,
+  Circle,
+  Square,
+  List,
+  Sidebar,
+  Star,
+  Folder,
+  Play,
+  MousePointer,
+  AlertTriangle,
 } from "lucide-react";
-import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, KeyboardSensor, closestCenter, useDroppable } from "@dnd-kit/core";
+import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, KeyboardSensor, closestCenter, useDroppable, useDraggable } from "@dnd-kit/core";
+import { SortableContext, rectSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { usePermissions } from "../hooks/usePermissions";
+import { useAuth } from "../auth/AuthContext";
 
 // Component Templates - Pre-built blocks
 const COMPONENT_TEMPLATES = {
@@ -120,6 +196,19 @@ const COMPONENT_LIBRARY = {
         backgroundColor: { type: "color", default: "#f9fafb", label: "Background" },
       },
     },
+    "side-nav": {
+      name: "Left Sidebar Nav",
+      icon: Layout,
+      category: "Layout",
+      description: "Left navigation rail for app pages",
+      properties: {
+        items: {
+          type: "text",
+          default: "Home, Claims, AI Watchtower, SLA & Operations, Knowledge Hub",
+          label: "Nav Items (comma-separated)",
+        },
+      },
+    },
   },
   platform: {
     "sop-reasoning-card": {
@@ -154,7 +243,7 @@ const COMPONENT_LIBRARY = {
   "form-controls": {
     "button": {
       name: "Button",
-      icon: Zap,
+      icon: MousePointer,
       category: "Form Controls",
       description: "Clickable button",
       properties: {
@@ -196,7 +285,7 @@ const COMPONENT_LIBRARY = {
     },
     "dropdown": {
       name: "Dropdown",
-      icon: ChevronDown,
+      icon: List,
       category: "Form Controls",
       description: "Select dropdown",
       properties: {
@@ -221,7 +310,7 @@ const COMPONENT_LIBRARY = {
     },
     "radio": {
       name: "Radio Button",
-      icon: Radio,
+      icon: Circle,
       category: "Form Controls",
       description: "Radio button group",
       properties: {
@@ -821,39 +910,254 @@ async function generateAppFromDescription(description, basicInfo) {
   const components = [];
 
   // Simple AI logic: extract entities and components from description
-  if (description.toLowerCase().includes("claim") || description.toLowerCase().includes("case")) {
+  const lower = description.toLowerCase();
+  const now = Date.now();
+  let counter = 0;
+  const nextId = () => `gen-${now}-${counter++}`;
+
+  // Detect primary domain/entity
+  let mainEntityName = "Record";
+  if (lower.includes("claim") || lower.includes("denial") || lower.includes("appeal")) {
+    mainEntityName = "Claim";
+  } else if (lower.includes("loan") || lower.includes("mortgage")) {
+    mainEntityName = "Loan";
+  } else if (lower.includes("ticket") || lower.includes("case") || lower.includes("incident")) {
+    mainEntityName = "Ticket";
+  } else if (lower.includes("order")) {
+    mainEntityName = "Order";
+  }
+
+  // Primary entity
+  if (mainEntityName === "Claim") {
     entities.push({
-      id: `entity-${Date.now()}`,
+      id: `entity-${now}`,
       name: "Claim",
       fields: [
         { name: "id", type: "string", required: true },
+        { name: "memberId", type: "string", required: true },
         { name: "amount", type: "number", required: true },
         { name: "status", type: "string", required: true },
-        { name: "date", type: "date", required: true },
+        { name: "receivedDate", type: "date", required: true },
+        { name: "slaRisk", type: "string", required: false },
       ],
     });
-    components.push({
-      id: `comp-${Date.now()}`,
-      type: "data-table",
-      name: "Claims Table",
-      props: {},
-      dataBinding: "Claim",
+  } else if (mainEntityName === "Loan") {
+    entities.push({
+      id: `entity-${now}`,
+      name: "Loan",
+      fields: [
+        { name: "id", type: "string", required: true },
+        { name: "borrowerName", type: "string", required: true },
+        { name: "amount", type: "number", required: true },
+        { name: "status", type: "string", required: true },
+        { name: "dti", type: "number", required: false },
+      ],
+    });
+  } else {
+    entities.push({
+      id: `entity-${now}`,
+      name: mainEntityName,
+      fields: [
+        { name: "id", type: "string", required: true },
+        { name: "name", type: "string", required: true },
+        { name: "status", type: "string", required: false },
+      ],
     });
   }
 
-  if (description.toLowerCase().includes("sop") || basicInfo.platform === "sop-navigator") {
+  // Core table for main entity (Home / Watchtower)
+  const homeTableId = nextId();
+  components.push({
+    id: homeTableId,
+    type: "data-table",
+    name: `${mainEntityName}s Table`,
+    props: {},
+    dataBinding: mainEntityName,
+    pageTag: "home",
+  });
+
+  // Claims worklist table (separate Claims page)
+  const claimsTableId = nextId();
+  components.push({
+    id: claimsTableId,
+    type: "data-table",
+    name: `${mainEntityName}s Worklist`,
+    props: {},
+    dataBinding: mainEntityName,
+    pageTag: "claims",
+  });
+
+  // SOP / AI reasoning cards if relevant
+  if (lower.includes("sop") || basicInfo.platform === "sop-navigator") {
+    // Home-level AI insights / Watchtower
     components.push({
-      id: `comp-${Date.now() + 1}`,
+      id: nextId(),
       type: "sop-reasoning-card",
-      name: "AI Reasoning",
+      name: "AI Watchtower – Overview",
       props: {},
       dataBinding: null,
+      pageTag: "home",
+    });
+
+    // Detail-level AI reasoning view
+    components.push({
+      id: nextId(),
+      type: "sop-reasoning-card",
+      name: "AI Reasoning – Claim Detail",
+      props: {},
+      dataBinding: null,
+      pageTag: "claim-detail",
     });
   }
+
+  // Production-like scaffolding: header, toolbar, layout, metrics
+  const headerId = nextId();
+  const toolbarId = nextId();
+  const mainContainerId = nextId();
+  const metricsGridId = nextId();
+
+  const appTitle = basicInfo.name || "New Application";
+
+  const scaffold = [
+    {
+      id: headerId,
+      type: "app-header",
+      name: `${appTitle} Header`,
+      props: {
+        showLogo: true,
+        showNavbar: true,
+        showAvatar: true,
+        showLoginInfo: true,
+      },
+      dataBinding: null,
+      pageTag: "home",
+    },
+    {
+      id: toolbarId,
+      type: "toolbar",
+      name: "Primary Toolbar",
+      props: {
+        showSearch: true,
+        showActions: true,
+      },
+      dataBinding: null,
+      pageTag: "home",
+    },
+    {
+      id: mainContainerId,
+      type: "container",
+      name: `${mainEntityName} Workspace`,
+      props: {
+        padding: 24,
+        backgroundColor: "#ffffff",
+      },
+      dataBinding: null,
+      pageTag: "home",
+    },
+    {
+      id: metricsGridId,
+      type: "grid",
+      name: "KPI Grid",
+      props: {
+        columns: 3,
+        gap: 16,
+      },
+      dataBinding: null,
+      parentId: mainContainerId,
+      pageTag: "home",
+    },
+    {
+      id: nextId(),
+      type: "metric-card",
+      name: "Open Items",
+      props: {
+        title: `Open ${mainEntityName}s`,
+        value: "128",
+        showTrend: true,
+      },
+      dataBinding: null,
+      parentId: metricsGridId,
+      pageTag: "home",
+    },
+    {
+      id: nextId(),
+      type: "metric-card",
+      name: "At Risk",
+      props: {
+        title: "At Risk / SLA",
+        value: "12",
+        showTrend: true,
+      },
+      dataBinding: null,
+      parentId: metricsGridId,
+      pageTag: "home",
+    },
+    {
+      id: nextId(),
+      type: "metric-card",
+      name: "Resolved",
+      props: {
+        title: "Resolved This Week",
+        value: "89",
+        showTrend: true,
+      },
+      dataBinding: null,
+      parentId: metricsGridId,
+      pageTag: "home",
+    },
+  ];
+
+  // Tag some components for secondary pages (detail and SLA views)
+  const detailComponents = [
+    {
+      id: nextId(),
+      type: "section",
+      name: `${mainEntityName} Detail Header`,
+      props: { padding: 16, backgroundColor: "#ffffff" },
+      pageTag: "claim-detail",
+    },
+    {
+      id: nextId(),
+      type: "data-table",
+      name: `${mainEntityName} Lines`,
+      props: {},
+      dataBinding: mainEntityName === "Claim" ? "ClaimLine" : mainEntityName,
+      pageTag: "claim-detail",
+    },
+  ];
+
+  const slaComponents = [
+    {
+      id: nextId(),
+      type: "chart",
+      name: "SLA Risk Trend",
+      props: {},
+      pageTag: "sla",
+    },
+  ];
+
+  // Knowledge Hub scaffolding
+  const knowledgeComponents = [
+    {
+      id: nextId(),
+      type: "section",
+      name: "Knowledge Hub – Overview",
+      props: { padding: 24, backgroundColor: "#ffffff" },
+      pageTag: "knowledge",
+    },
+  ];
+
+  const allComponents = [
+    ...scaffold,
+    ...components,
+    ...detailComponents,
+    ...slaComponents,
+    ...knowledgeComponents,
+  ];
 
   return {
     entities,
-    components,
+    components: allComponents,
   };
 }
 
@@ -875,8 +1179,64 @@ function DroppableCanvas({ children, onDrop }) {
   );
 }
 
+// Draggable Component Library Item
+function DraggableComponent({ id, name, icon: Icon, disabled = false }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: id,
+    disabled: disabled,
+  });
+
+  const style = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+      }
+    : undefined;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      className={`p-2 rounded-lg border cursor-move transition-all ${
+        disabled
+          ? "border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed"
+          : isDragging
+          ? "opacity-50 border-[#612D91] bg-indigo-50"
+          : "border-gray-200 hover:border-[#612D91] hover:bg-indigo-50"
+      }`}
+    >
+      <div className="flex items-center gap-2">
+        {Icon && <Icon className="w-4 h-4 text-gray-600" />}
+        <div className="flex-1 min-w-0">
+          <div className="text-xs font-medium text-gray-900 truncate">{name}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AppBuilder({ app: existingApp, onClose, onSave }) {
+  const { isAuthenticated } = useAuth();
   const permissions = usePermissions();
+
+  // Check authentication first
+  if (!isAuthenticated) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl p-8 max-w-md mx-4 shadow-2xl">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Sign In Required</h2>
+          <p className="text-gray-600 mb-6">Please sign in to access the AppBuilder.</p>
+          <button
+            onClick={onClose}
+            className="w-full px-4 py-2 bg-[#612D91] text-white rounded-lg font-semibold hover:bg-[#7B3DA1] transition"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Check access
   if (!permissions.canAccessAppBuilder) {
@@ -974,7 +1334,28 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
     const { active, over } = event;
     setDraggedComponent(null);
 
-    if (!over || over.id !== "canvas") return;
+    const overId = over?.id;
+    // If reordering within canvas (same parent)
+    if (active?.data?.current?.sortable && over?.data?.current?.sortable) {
+      const activeId = active.id;
+      const overIdSortable = over.id;
+      const updatedPages = [...appData.pages];
+      const items = updatedPages[activePage].components.filter((c) => c.parentId == null);
+      const oldIndex = items.findIndex((c) => c.id === activeId);
+      const newIndex = items.findIndex((c) => c.id === overIdSortable);
+      if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+        const reordered = arrayMove(items, oldIndex, newIndex);
+        const rest = updatedPages[activePage].components.filter((c) => c.parentId);
+        updatedPages[activePage].components = [...reordered, ...rest];
+        setAppData({ ...appData, pages: updatedPages });
+      }
+      return;
+    }
+    const isCanvasDrop = overId === "canvas";
+    const isContainerDrop =
+      typeof overId === "string" && overId.startsWith("drop-");
+
+    if (!isCanvasDrop && !isContainerDrop) return;
 
     const componentType = active.id;
     const componentDef = Object.values(COMPONENT_LIBRARY)
@@ -982,12 +1363,15 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
       .find(([key]) => key === componentType)?.[1];
 
     if (componentDef) {
+      const parentId = isContainerDrop ? overId.replace("drop-", "") : null;
+
       const newComponent = {
         id: `comp-${Date.now()}`,
         type: componentType,
         name: componentDef.name,
         props: {},
         dataBinding: null,
+        parentId,
       };
 
       const updatedPages = [...appData.pages];
@@ -1018,6 +1402,109 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
     onSave?.(finalAppData);
   };
 
+  const handleOpenFullPreview = () => {
+    if (typeof window === "undefined") return;
+    const previewWindow = window.open("", "_blank", "width=1400,height=900");
+    if (!previewWindow) return;
+
+    const title = basicInfo.name || appData.name || "FAB App Preview";
+    previewWindow.document.title = title;
+    previewWindow.document.body.style.margin = "0";
+    // Use a neutral background so the app looks like the in-builder preview
+    previewWindow.document.body.style.backgroundColor = "#f1f5f9";
+
+    // Clone existing styles into the new window so Tailwind / app styles apply
+    try {
+      const sourceHead = window.document.head;
+      const targetHead = previewWindow.document.head;
+      if (sourceHead && targetHead) {
+        Array.from(
+          sourceHead.querySelectorAll('style, link[rel="stylesheet"]')
+        ).forEach((node) => {
+          targetHead.appendChild(node.cloneNode(true));
+        });
+      }
+    } catch (err) {
+      // Fail silently – worst case, preview is unstyled
+      console.error("Failed to copy styles to preview window", err);
+    }
+
+    const container = previewWindow.document.createElement("div");
+    container.id = "full-preview-root";
+    previewWindow.document.body.appendChild(container);
+
+    const root = createRoot(container);
+
+    function StandalonePreview() {
+      const [pageIndex, setPageIndex] = useState(activePage);
+      const safeIndex =
+        pageIndex >= 0 && pageIndex < appData.pages.length ? pageIndex : 0;
+      const pageComponents =
+        appData.pages[safeIndex]?.components || [];
+
+      return (
+        <LivePreview
+          components={pageComponents}
+          dataModel={appData.dataModel}
+          responsiveMode="desktop"
+          appName={title}
+          pages={appData.pages}
+          activePage={safeIndex}
+          onNavigatePage={setPageIndex}
+          fullScreen={true}
+        />
+      );
+    }
+
+    root.render(<StandalonePreview />);
+  };
+
+  // Recursive renderer for nested components
+  const renderComponents = (parentId = null, depth = 0) => {
+    const items = appData.pages[activePage].components.filter(
+      (c) => (c.parentId ?? null) === parentId
+    );
+    if (items.length === 0) return null;
+
+    const parent =
+      parentId == null
+        ? null
+        : appData.pages[activePage].components.find((c) => c.id === parentId);
+    const isGridParent = parent?.type === "grid";
+    const gridColumns = parent?.props?.columns || 3;
+
+    return (
+      <SortableContext items={items.map((i) => i.id)} strategy={rectSortingStrategy}>
+        <div
+          className={
+            isGridParent
+              ? "mt-2 grid gap-3"
+              : ""
+          }
+          style={
+            isGridParent
+              ? { gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))` }
+              : undefined
+          }
+        >
+          {items.map((comp) => (
+            <div
+              key={comp.id}
+              className={isGridParent ? "" : depth > 0 ? "ml-4" : ""}
+            >
+              <ComponentPreview
+                component={comp}
+                isSelected={selectedComponent?.id === comp.id}
+                onClick={() => setSelectedComponent(comp)}
+              />
+              {renderComponents(comp.id, depth + 1)}
+            </div>
+          ))}
+        </div>
+      </SortableContext>
+    );
+  };
+
   const handleAICreate = async () => {
     if (!aiDescription.trim()) return;
 
@@ -1043,11 +1530,75 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
       // Generate app structure
       const generated = await generateAppFromDescription(aiDescription, basicInfo);
 
+      // Normalize generated components to ensure parentId is explicitly handled
+      const normalizedComponents = (generated.components || []).map((comp) => ({
+        ...comp,
+        parentId: comp.parentId ?? null,
+      }));
+
+      // Build multi-page scaffolding aligned to Cogniclaim-style layout
+      const homeComponents = normalizedComponents.filter(
+        (c) => !c.pageTag || c.pageTag === "home"
+      );
+      const claimsComponents = normalizedComponents.filter((c) => c.pageTag === "claims");
+      const detailComponents = normalizedComponents.filter((c) => c.pageTag === "claim-detail");
+      const slaComponents = normalizedComponents.filter(
+        (c) => c.pageTag === "sla" || c.pageTag === "sla-insights-section"
+      );
+      const knowledgeComponents = normalizedComponents.filter((c) => c.pageTag === "knowledge");
+
+      let pages = [
+        { name: "AI Watchtower", components: homeComponents },
+        {
+          name: "Claims",
+          components: claimsComponents.length ? claimsComponents : homeComponents,
+        },
+        {
+          name: "AI Reasoning",
+          components: detailComponents.length ? detailComponents : homeComponents,
+        },
+        {
+          name: "SLA and Operations",
+          components: slaComponents.length ? slaComponents : homeComponents,
+        },
+        {
+          name: "Knowledge Hub",
+          components: knowledgeComponents.length ? knowledgeComponents : homeComponents,
+        },
+        {
+          name: "Settings",
+          components: [],
+        },
+      ];
+
+      // Try to align page names to nav items explicitly listed in the prompt
+      try {
+        const lines = aiDescription.split("\n");
+        const navItems = lines
+          .filter((line) => line.trim().startsWith("-"))
+          .map((line) =>
+            line
+              .trim()
+              .replace(/^-\s*/, "")
+              .replace(/^["“”]+|["“”]+$/g, "")
+          )
+          .filter((txt) => txt && !txt.toLowerCase().includes("persistent left sidebar"));
+
+        if (navItems.length) {
+          pages = pages.map((page, idx) => ({
+            ...page,
+            name: navItems[idx] || page.name,
+          }));
+        }
+      } catch {
+        // best-effort only; if parsing fails, keep default names
+      }
+
       // Update app data with generated structure
       setAppData({
         ...appData,
-        dataModel: { entities: generated.entities },
-        pages: [{ name: "Home", components: generated.components }],
+        dataModel: { entities: generated.entities || [] },
+        pages,
       });
 
       setIsGenerating(false);
@@ -1390,34 +1941,46 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
             </button>
           </div>
 
-          {/* View Mode Controls */}
-          <div className="flex items-center gap-1 border border-gray-200 rounded-lg p-1">
+          {/* View Mode + Run Controls */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 border border-gray-200 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode("canvas")}
+                className={`p-1.5 rounded transition-colors ${
+                  viewMode === "canvas" ? "bg-[#612D91] text-white" : "text-gray-600 hover:bg-gray-100"
+                }`}
+                title="Canvas Only"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("split")}
+                className={`p-1.5 rounded transition-colors ${
+                  viewMode === "split" ? "bg-[#612D91] text-white" : "text-gray-600 hover:bg-gray-100"
+                }`}
+                title="Split View"
+              >
+                <Split className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("preview")}
+                className={`p-1.5 rounded transition-colors ${
+                  viewMode === "preview" ? "bg-[#612D91] text-white" : "text-gray-600 hover:bg-gray-100"
+                }`}
+                title="Preview Only"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
+            </div>
+            {/* Run in new tab (opens full-page preview) */}
             <button
-              onClick={() => setViewMode("canvas")}
-              className={`p-1.5 rounded transition-colors ${
-                viewMode === "canvas" ? "bg-[#612D91] text-white" : "text-gray-600 hover:bg-gray-100"
-              }`}
-              title="Canvas Only"
+              type="button"
+              onClick={handleOpenFullPreview}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-100"
+              title="Run app in new tab"
             >
-              <Maximize2 className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode("split")}
-              className={`p-1.5 rounded transition-colors ${
-                viewMode === "split" ? "bg-[#612D91] text-white" : "text-gray-600 hover:bg-gray-100"
-              }`}
-              title="Split View"
-            >
-              <Split className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode("preview")}
-              className={`p-1.5 rounded transition-colors ${
-                viewMode === "preview" ? "bg-[#612D91] text-white" : "text-gray-600 hover:bg-gray-100"
-              }`}
-              title="Preview Only"
-            >
-              <Eye className="w-4 h-4" />
+              <Play className="w-4 h-4" />
+              <span>Run</span>
             </button>
           </div>
           <button
@@ -1454,6 +2017,12 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
         {/* Left Sidebar - Component Library & Data Model */}
         <div className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
           <div className="p-4 space-y-4">
@@ -1634,24 +2203,12 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
                       .map(([key, comp]) => {
                       const Icon = comp.icon;
                       return (
-                        <div
+                        <DraggableComponent
                           key={key}
                           id={key}
-                          draggable
-                          onDragStart={(e) => {
-                            e.dataTransfer.effectAllowed = "move";
-                            e.dataTransfer.setData("text/plain", key);
-                            setDraggedComponent(key);
-                          }}
-                          className="p-2 rounded-lg border border-gray-200 hover:border-[#612D91] hover:bg-indigo-50 cursor-move transition-all"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Icon className="w-4 h-4 text-gray-600" />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-xs font-medium text-gray-900 truncate">{comp.name}</div>
-                            </div>
-                          </div>
-                        </div>
+                          name={comp.name}
+                          icon={Icon}
+                        />
                       );
                     })}
                   </div>
@@ -1686,30 +2243,13 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
                       const Icon = comp.icon;
                       const isCompatible = !comp.platform || comp.platform === basicInfo.platform || comp.platform === appData.platform;
                       return (
-                        <div
+                        <DraggableComponent
                           key={key}
                           id={key}
-                          draggable={isCompatible}
-                          onDragStart={(e) => {
-                            if (isCompatible) {
-                              e.dataTransfer.effectAllowed = "move";
-                              e.dataTransfer.setData("text/plain", key);
-                              setDraggedComponent(key);
-                            }
-                          }}
-                          className={`p-2 rounded-lg border cursor-move transition-all ${
-                            isCompatible
-                              ? "border-gray-200 hover:border-[#612D91] hover:bg-indigo-50"
-                              : "border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Icon className="w-4 h-4 text-gray-600" />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-xs font-medium text-gray-900 truncate">{comp.name}</div>
-                            </div>
-                          </div>
-                        </div>
+                          name={comp.name}
+                          icon={Icon}
+                          disabled={!isCompatible}
+                        />
                       );
                     })}
                   </div>
@@ -1742,24 +2282,12 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
                         .map(([key, comp]) => {
                           const Icon = comp.icon;
                           return (
-                            <div
+                            <DraggableComponent
                               key={key}
                               id={key}
-                              draggable={true}
-                              onDragStart={(e) => {
-                                e.dataTransfer.effectAllowed = "move";
-                                e.dataTransfer.setData("text/plain", key);
-                                setDraggedComponent(key);
-                              }}
-                              className="p-2 rounded-lg border border-gray-200 hover:border-[#612D91] hover:bg-indigo-50 cursor-move transition-all"
-                            >
-                              <div className="flex items-center gap-2">
-                                <Icon className="w-4 h-4 text-gray-600" />
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-xs font-medium text-gray-900 truncate">{comp.name}</div>
-                                </div>
-                              </div>
-                            </div>
+                              name={comp.name}
+                              icon={Icon}
+                            />
                           );
                         })}
                     </div>
@@ -1793,24 +2321,12 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
                         .map(([key, comp]) => {
                           const Icon = comp.icon;
                           return (
-                            <div
+                            <DraggableComponent
                               key={key}
                               id={key}
-                              draggable={true}
-                              onDragStart={(e) => {
-                                e.dataTransfer.effectAllowed = "move";
-                                e.dataTransfer.setData("text/plain", key);
-                                setDraggedComponent(key);
-                              }}
-                              className="p-2 rounded-lg border border-gray-200 hover:border-[#612D91] hover:bg-indigo-50 cursor-move transition-all"
-                            >
-                              <div className="flex items-center gap-2">
-                                <Icon className="w-4 h-4 text-gray-600" />
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-xs font-medium text-gray-900 truncate">{comp.name}</div>
-                                </div>
-                              </div>
-                            </div>
+                              name={comp.name}
+                              icon={Icon}
+                            />
                           );
                         })}
                     </div>
@@ -1844,24 +2360,12 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
                         .map(([key, comp]) => {
                           const Icon = comp.icon;
                           return (
-                            <div
+                            <DraggableComponent
                               key={key}
                               id={key}
-                              draggable={true}
-                              onDragStart={(e) => {
-                                e.dataTransfer.effectAllowed = "move";
-                                e.dataTransfer.setData("text/plain", key);
-                                setDraggedComponent(key);
-                              }}
-                              className="p-2 rounded-lg border border-gray-200 hover:border-[#612D91] hover:bg-indigo-50 cursor-move transition-all"
-                            >
-                              <div className="flex items-center gap-2">
-                                <Icon className="w-4 h-4 text-gray-600" />
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-xs font-medium text-gray-900 truncate">{comp.name}</div>
-                                </div>
-                              </div>
-                            </div>
+                              name={comp.name}
+                              icon={Icon}
+                            />
                           );
                         })}
                     </div>
@@ -1895,24 +2399,12 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
                         .map(([key, comp]) => {
                           const Icon = comp.icon;
                           return (
-                            <div
+                            <DraggableComponent
                               key={key}
                               id={key}
-                              draggable={true}
-                              onDragStart={(e) => {
-                                e.dataTransfer.effectAllowed = "move";
-                                e.dataTransfer.setData("text/plain", key);
-                                setDraggedComponent(key);
-                              }}
-                              className="p-2 rounded-lg border border-gray-200 hover:border-[#612D91] hover:bg-indigo-50 cursor-move transition-all"
-                            >
-                              <div className="flex items-center gap-2">
-                                <Icon className="w-4 h-4 text-gray-600" />
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-xs font-medium text-gray-900 truncate">{comp.name}</div>
-                                </div>
-                              </div>
-                            </div>
+                              name={comp.name}
+                              icon={Icon}
+                            />
                           );
                         })}
                     </div>
@@ -1946,24 +2438,12 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
                         .map(([key, comp]) => {
                           const Icon = comp.icon;
                           return (
-                            <div
+                            <DraggableComponent
                               key={key}
                               id={key}
-                              draggable={true}
-                              onDragStart={(e) => {
-                                e.dataTransfer.effectAllowed = "move";
-                                e.dataTransfer.setData("text/plain", key);
-                                setDraggedComponent(key);
-                              }}
-                              className="p-2 rounded-lg border border-gray-200 hover:border-[#612D91] hover:bg-indigo-50 cursor-move transition-all"
-                            >
-                              <div className="flex items-center gap-2">
-                                <Icon className="w-4 h-4 text-gray-600" />
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-xs font-medium text-gray-900 truncate">{comp.name}</div>
-                                </div>
-                              </div>
-                            </div>
+                              name={comp.name}
+                              icon={Icon}
+                            />
                           );
                         })}
                     </div>
@@ -1997,24 +2477,12 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
                         .map(([key, comp]) => {
                           const Icon = comp.icon;
                           return (
-                            <div
+                            <DraggableComponent
                               key={key}
                               id={key}
-                              draggable={true}
-                              onDragStart={(e) => {
-                                e.dataTransfer.effectAllowed = "move";
-                                e.dataTransfer.setData("text/plain", key);
-                                setDraggedComponent(key);
-                              }}
-                              className="p-2 rounded-lg border border-gray-200 hover:border-[#612D91] hover:bg-indigo-50 cursor-move transition-all"
-                            >
-                              <div className="flex items-center gap-2">
-                                <Icon className="w-4 h-4 text-gray-600" />
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-xs font-medium text-gray-900 truncate">{comp.name}</div>
-                                </div>
-                              </div>
-                            </div>
+                              name={comp.name}
+                              icon={Icon}
+                            />
                           );
                         })}
                     </div>
@@ -2026,14 +2494,49 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
         </div>
 
         {/* Center - Canvas/Preview */}
-        <div className={`flex-1 bg-gray-50 overflow-hidden ${
-          viewMode === "split" ? "flex" : ""
-        }`}>
+        <div
+          className={`flex-1 bg-gray-50 overflow-y-auto ${
+            viewMode === "split" ? "flex" : ""
+          }`}
+        >
+          {/* Page Tabs */}
+          <div className="px-6 pt-4 pb-2 flex items-center justify-between border-b border-gray-200 bg-gray-50 sticky top-0 z-10">
+            <div className="flex items-center gap-2 flex-wrap">
+              {appData.pages.map((page, index) => {
+                const isActive = index === activePage;
+                return (
+                  <button
+                    key={page.name || index}
+                    onClick={() => {
+                      setActivePage(index);
+                      setSelectedComponent(null);
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                      isActive
+                        ? "bg-white text-gray-900 shadow-sm border border-gray-300"
+                        : "bg-transparent text-gray-500 hover:bg-white/70 hover:text-gray-900 border border-transparent"
+                    }`}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>{page.name || `Page ${index + 1}`}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="hidden md:flex items-center gap-2 text-[11px] text-gray-500">
+              <span className="uppercase tracking-[0.2em]">Page</span>
+              <span className="font-semibold text-gray-700">
+                {appData.pages[activePage]?.name || "Untitled"}
+              </span>
+            </div>
+          </div>
           {/* Canvas View */}
           {(viewMode === "canvas" || viewMode === "split") && (
-            <div className={`bg-gray-50 overflow-y-auto p-6 ${
-              viewMode === "split" ? "w-1/2 border-r border-gray-200" : "flex-1"
-            }`}>
+            <div
+              className={`bg-gray-50 overflow-y-auto p-6 ${
+                viewMode === "split" ? "w-1/2 border-r border-gray-200" : "flex-1"
+              }`}
+            >
               <div className={`mb-4 text-xs font-medium text-gray-500 ${
                 responsiveMode === "desktop" ? "" : 
                 responsiveMode === "tablet" ? "max-w-3xl mx-auto" : "max-w-sm mx-auto"
@@ -2042,54 +2545,42 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
                 {responsiveMode === "tablet" && "Tablet View (768px)"}
                 {responsiveMode === "mobile" && "Mobile View (375px)"}
               </div>
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-              >
-                <div className={`
+              <div className={`
                   ${responsiveMode === "desktop" ? "" : 
                     responsiveMode === "tablet" ? "max-w-3xl mx-auto" : "max-w-sm mx-auto"}
                 `}>
-                  <DroppableCanvas>
-                    {appData.pages[activePage].components.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-                        <Layers className="w-12 h-12 mb-4" />
-                        <p className="text-sm">Drag components here to build your app</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {appData.pages[activePage].components.map((comp) => (
-                          <ComponentPreview
-                            key={comp.id}
-                            component={comp}
-                            isSelected={selectedComponent?.id === comp.id}
-                            onClick={() => setSelectedComponent(comp)}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </DroppableCanvas>
-                </div>
-                <DragOverlay>
-                  {draggedComponent && (
-                    <div className="p-4 bg-white rounded-lg shadow-xl border-2 border-[#612D91]">
-                      {Object.values(COMPONENT_LIBRARY)
-                        .flatMap((cat) => Object.entries(cat))
-                        .find(([key]) => key === draggedComponent)?.[1]?.name || draggedComponent}
+                <DroppableCanvas>
+                  {appData.pages[activePage].components.filter((c) => c.parentId == null).length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+                      <Layers className="w-12 h-12 mb-4" />
+                      <p className="text-sm">Drag components here to build your app</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {renderComponents(null)}
                     </div>
                   )}
-                </DragOverlay>
-              </DndContext>
+                </DroppableCanvas>
+              </div>
+              <DragOverlay>
+                {draggedComponent && (
+                  <div className="p-4 bg-white rounded-lg shadow-xl border-2 border-[#612D91]">
+                    {Object.values(COMPONENT_LIBRARY)
+                      .flatMap((cat) => Object.entries(cat))
+                      .find(([key]) => key === draggedComponent)?.[1]?.name || draggedComponent}
+                  </div>
+                )}
+              </DragOverlay>
             </div>
           )}
 
           {/* Preview View */}
           {(viewMode === "preview" || viewMode === "split") && (
-            <div className={`bg-white overflow-y-auto p-6 ${
-              viewMode === "split" ? "w-1/2" : "flex-1"
-            }`}>
+            <div
+              className={`bg-white overflow-y-auto p-6 ${
+                viewMode === "split" ? "w-1/2" : "flex-1"
+              }`}
+            >
               <div className={`mb-4 text-xs font-medium text-gray-500 ${
                 responsiveMode === "desktop" ? "" : 
                 responsiveMode === "tablet" ? "max-w-3xl mx-auto" : "max-w-sm mx-auto"
@@ -2104,6 +2595,16 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
                   components={appData.pages[activePage].components}
                   dataModel={appData.dataModel}
                   responsiveMode={responsiveMode}
+                  appName={basicInfo.name || appData.name}
+                  pages={appData.pages}
+                  activePage={activePage}
+                  onNavigatePage={(index) => {
+                    if (index >= 0 && index < appData.pages.length) {
+                      setActivePage(index);
+                      setSelectedComponent(null);
+                    }
+                  }}
+                  onOpenFullPreview={handleOpenFullPreview}
                 />
               </div>
             </div>
@@ -2129,8 +2630,27 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
                   setSelectedComponent(updatedComponent);
                 }}
                 onDelete={() => {
-                  const updated = appData.pages[activePage].components.filter(
-                    (c) => c.id !== selectedComponent.id
+                  // Remove the selected component and its descendants
+                  const removeWithChildren = (list, idToRemove) => {
+                    const idsToRemove = new Set([idToRemove]);
+                    let changed = true;
+                    while (changed) {
+                      changed = false;
+                      list.forEach((item) => {
+                        if (idsToRemove.has(item.parentId)) {
+                          if (!idsToRemove.has(item.id)) {
+                            idsToRemove.add(item.id);
+                            changed = true;
+                          }
+                        }
+                      });
+                    }
+                    return list.filter((item) => !idsToRemove.has(item.id));
+                  };
+
+                  const updated = removeWithChildren(
+                    appData.pages[activePage].components,
+                    selectedComponent.id
                   );
                   const updatedPages = [...appData.pages];
                   updatedPages[activePage].components = updated;
@@ -2157,6 +2677,7 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
             )}
           </div>
         </div>
+        </DndContext>
       </div>
 
       {/* Entity Editor Modal */}
@@ -2209,17 +2730,32 @@ function ComponentPreview({ component, isSelected, onClick }) {
     .find(([key]) => key === component.type)?.[1];
 
   const Icon = componentDef?.icon || Layers;
+  const isContainerType = ["container", "section", "grid", "card"].includes(component.type);
+  const props = component.props || {};
+  const isSideNav = component.type === "side-nav";
+  const { setNodeRef, isOver } = useDroppable({
+    id: `drop-${component.id}`,
+    disabled: !isContainerType,
+  });
+
+  const wrapperBase =
+    "rounded-lg border-2 cursor-pointer transition-all bg-white";
+  const wrapperSelected = isSelected ? "border-[#612D91] bg-indigo-50" : "border-gray-200 hover:border-gray-300";
+  const wrapperOver =
+    isOver && isContainerType ? "border-dashed border-[#612D91]" : "";
+
+  // Side nav should look like a vertical left rail, not a full-width rectangle
+  const sideNavWrapper = isSideNav
+    ? "p-3 w-56"
+    : "p-4 w-full";
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       onClick={onClick}
-      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-        isSelected
-          ? "border-[#612D91] bg-indigo-50"
-          : "border-gray-200 hover:border-gray-300 bg-white"
-      }`}
+      ref={isContainerType ? setNodeRef : null}
+      className={`${wrapperBase} ${wrapperSelected} ${wrapperOver} ${sideNavWrapper}`}
     >
       <div className="flex items-center gap-3">
         <div className="p-2 rounded-lg bg-gray-100">
@@ -2232,6 +2768,128 @@ function ComponentPreview({ component, isSelected, onClick }) {
             <div className="text-xs text-indigo-600 mt-1">Bound to: {component.dataBinding}</div>
           )}
         </div>
+      </div>
+      {/* Inline control preview so canvas feels like real UI */}
+      <div className="mt-3 text-xs">
+        {/* Layout containers */}
+        {isContainerType && !isSideNav && (
+          <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-2 text-[11px] text-gray-500">
+            Drop components here
+          </div>
+        )}
+
+        {/* Side nav preview */}
+        {isSideNav && (
+          <div className="flex border border-gray-200 rounded-lg overflow-hidden text-[11px]">
+            <div className="w-28 bg-gray-900 text-gray-100 py-2">
+              <div className="px-3 pb-2 text-[10px] uppercase tracking-wide text-gray-400">
+                Navigation
+              </div>
+              {(props.items || "Home, Claims, AI Watchtower, SLA & Operations")
+                .split(",")
+                .map((item, idx) => (
+                  <div
+                    key={idx}
+                    className={`px-3 py-1 ${
+                      idx === 0
+                        ? "bg-gray-800 text-white"
+                        : "text-gray-300 hover:bg-gray-800/60"
+                    }`}
+                  >
+                    {item.trim()}
+                  </div>
+                ))}
+            </div>
+            <div className="flex-1 bg-white py-3 px-4 text-gray-400">
+              Page content
+            </div>
+          </div>
+        )}
+
+        {/* Form controls */}
+        {component.type === "input" && (
+          <input
+            type={props.type || "text"}
+            placeholder={props.placeholder || "Text input"}
+            className="w-full px-3 py-1.5 rounded-md border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-[#612D91]"
+          />
+        )}
+        {component.type === "textarea" && (
+          <textarea
+            rows={props.rows || 3}
+            placeholder={props.placeholder || "Textarea"}
+            className="w-full px-3 py-1.5 rounded-md border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-[#612D91]"
+          />
+        )}
+        {component.type === "dropdown" && (
+          <select className="w-full px-3 py-1.5 rounded-md border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-[#612D91]">
+            {(props.options || "Option 1, Option 2, Option 3")
+              .split(",")
+              .map((o) => o.trim())
+              .filter(Boolean)
+              .map((opt, idx) => (
+                <option key={idx}>{opt}</option>
+              ))}
+          </select>
+        )}
+        {component.type === "checkbox" && (
+          <label className="inline-flex items-center gap-1.5 text-xs text-gray-700">
+            <input
+              type="checkbox"
+              defaultChecked={props.checked}
+              className="h-3.5 w-3.5 rounded border-gray-300 text-[#612D91] focus:ring-[#612D91]"
+            />
+            <span>{props.label || "Checkbox"}</span>
+          </label>
+        )}
+        {component.type === "radio" && (
+          <div className="flex flex-wrap gap-3">
+            {(props.options || "Option 1, Option 2, Option 3")
+              .split(",")
+              .map((o) => o.trim())
+              .filter(Boolean)
+              .map((opt, idx) => (
+                <label key={idx} className="inline-flex items-center gap-1.5">
+                  <input
+                    type="radio"
+                    name={component.id}
+                    className="h-3.5 w-3.5 border-gray-300 text-[#612D91] focus:ring-[#612D91]"
+                  />
+                  <span>{opt}</span>
+                </label>
+              ))}
+          </div>
+        )}
+        {component.type === "switch" && (
+          <button
+            type="button"
+            className={`relative inline-flex h-4 w-7 items-center rounded-full border ${
+              props.checked
+                ? "bg-[#612D91] border-[#612D91]"
+                : "bg-gray-200 border-gray-300"
+            }`}
+          >
+            <span
+              className={`inline-block h-3 w-3 transform rounded-full bg-white transition ${
+                props.checked ? "translate-x-3" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+        )}
+        {component.type === "date-picker" && (
+          <input
+            type="date"
+            className="w-full px-3 py-1.5 rounded-md border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-[#612D91]"
+          />
+        )}
+        {component.type === "button" && (
+          <button
+            type="button"
+            className="inline-flex items-center justify-center px-3 py-1.5 rounded-md bg-[#612D91] text-white text-xs font-medium hover:bg-[#7B3DA1]"
+          >
+            {props.label || component.name || "Button"}
+          </button>
+        )}
       </div>
     </motion.div>
   );
@@ -2920,103 +3578,642 @@ function CodeGenerator({ appData, basicInfo, onClose, onDeploy }) {
   );
 }
 
-// Live Preview Component
-function LivePreview({ components, dataModel, responsiveMode }) {
-  return (
-    <div className="space-y-4">
-      {components.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-          <Eye className="w-12 h-12 mb-4" />
-          <p className="text-sm">No components to preview</p>
-          <p className="text-xs mt-1">Add components to see live preview</p>
+// Live Preview Component - App-like layout
+function LivePreview({
+  components,
+  dataModel,
+  responsiveMode,
+  appName,
+  pages,
+  activePage,
+  onNavigatePage,
+  onOpenFullPreview,
+  fullScreen = false,
+}) {
+  if (components.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+        <Eye className="w-12 h-12 mb-4" />
+        <p className="text-sm">No components to preview</p>
+        <p className="text-xs mt-1">Add components to see live preview</p>
+      </div>
+    );
+  }
+
+  const header = components.find((c) => c.type === "app-header");
+  const toolbar = components.find((c) => c.type === "toolbar");
+  const metrics = components.filter((c) => c.type === "metric-card");
+  const tables = components.filter((c) => c.type === "data-table");
+  const reasoningCards = components.filter((c) => c.type === "sop-reasoning-card");
+  const formControls = components.filter((c) =>
+    ["button", "input", "textarea", "dropdown", "checkbox", "radio", "switch", "date-picker", "slider", "rating"].includes(
+      c.type
+    )
+  );
+
+  const appTitle = appName || header?.name || "New Application";
+
+  const sideNavComponent = components.find((c) => c.type === "side-nav");
+  const sideNavItems =
+    (sideNavComponent?.props?.items ||
+      (pages && pages.length ? pages.map((p) => p.name || "Page") : null)) ||
+    ["AI Watchtower", "Claims", "AI Reasoning", "SLA and Operations", "Knowledge Hub", "Settings"];
+
+  const currentPageName =
+    pages && pages[activePage]?.name
+      ? String(pages[activePage].name).toLowerCase()
+      : "";
+
+  // Track which components get rendered with special handling so we can show generic
+  // placeholders for everything else (charts, cards, etc.) instead of hiding them.
+  const renderedIds = new Set();
+  metrics.forEach((m) => renderedIds.add(m.id));
+  tables.forEach((t) => renderedIds.add(t.id));
+  reasoningCards.forEach((r) => renderedIds.add(r.id));
+  formControls.forEach((f) => renderedIds.add(f.id));
+
+  // Main content reused across embedded and full-screen modes
+  const mainContent = (
+    <div className={fullScreen ? "h-full bg-slate-50" : "min-h-full bg-slate-50 py-4"}>
+      <div
+        className={
+          fullScreen
+            ? "h-full w-full bg-white overflow-hidden"
+            : "max-w-6xl mx-auto bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden"
+        }
+      >
+        {/* Top App Header */}
+        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-900 text-white">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center">
+              <Layers className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-300">
+                FAB Builder Preview
+              </div>
+              <div className="text-sm font-semibold">{appTitle}</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 text-xs text-slate-200">
+            <span>Demo User</span>
+            <div className="h-7 w-7 rounded-full bg-slate-700" />
+          </div>
         </div>
-      ) : (
-        components.map((comp) => {
-          const componentDef = Object.values(COMPONENT_LIBRARY)
-            .flatMap((cat) => Object.entries(cat))
-            .find(([key]) => key === comp.type)?.[1];
 
-          const Icon = componentDef?.icon || Layers;
-          const props = comp.props || {};
+        {/* Toolbar */}
+        <div className="px-6 py-3 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <Search className="w-3.5 h-3.5" />
+            <span>Search or filter records</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <button className="px-2.5 py-1 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">
+              Add Filter
+            </button>
+            <button className="px-2.5 py-1 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 flex items-center gap-1.5">
+              <Sparkles className="w-3 h-3" />
+              Run AI
+            </button>
+          </div>
+        </div>
 
-          // Render component preview based on type
-          return (
-            <div
-              key={comp.id}
-              className="p-4 rounded-lg border border-gray-200 bg-white shadow-sm"
-              style={{
-                padding: props.padding ? `${props.padding}px` : undefined,
-                margin: props.margin ? `${props.margin}px` : undefined,
-                backgroundColor: props.backgroundColor || undefined,
-                borderRadius: props.borderRadius ? `${props.borderRadius}px` : undefined,
-                borderColor: props.borderColor || undefined,
-              }}
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-lg bg-gray-100">
-                  <Icon className="w-4 h-4 text-gray-600" />
+        {/* Main content */}
+        <div className="px-6 py-5 grid grid-cols-1 lg:grid-cols-[2fr,1.1fr] gap-5">
+          {/* Left side - KPIs + Table + Form controls */}
+          <div className="space-y-4">
+            {/* KPI Row */}
+            {(metrics.length > 0 || currentPageName.includes("sla")) && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {(metrics.length > 0
+                  ? metrics.slice(0, 3).map((m) => ({
+                      id: m.id,
+                      title: m.props?.title || m.name,
+                      value: m.props?.value || "1,234",
+                      subtitle: "Metric Value",
+                    }))
+                  : [
+                      {
+                        id: "sla-1",
+                        title: "At Risk / SLA",
+                        value: "128",
+                        subtitle: "Claims likely to miss timely payment",
+                      },
+                      {
+                        id: "sla-2",
+                        title: "Breached SLAs",
+                        value: "42",
+                        subtitle: "Already beyond timely payment window",
+                      },
+                      {
+                        id: "sla-3",
+                        title: "Late Payment Exposure",
+                        value: "$20M",
+                        subtitle: "YTD penalty risk (Texas & Michigan focus)",
+                      },
+                    ]
+                ).map((m) => (
+                  <div
+                    key={m.id}
+                    className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-3"
+                  >
+                    <div className="text-[11px] uppercase tracking-wide text-slate-500">
+                      {m.title}
+                    </div>
+                    <div className="mt-1 text-lg font-semibold text-slate-900">
+                      {m.value}
+                    </div>
+                    <div className="mt-0.5 text-[11px] text-slate-500 text-[11px]">
+                      {m.subtitle}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Primary table */}
+            {tables[0] && (
+              <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+                <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-900">
+                      {tables[0].name || "Records"}
+                    </div>
+                    {tables[0].dataBinding && (
+                      <div className="text-[11px] text-indigo-600 flex items-center gap-1">
+                        <Database className="w-3 h-3" />
+                        Bound to: {tables[0].dataBinding}
+                      </div>
+                    )}
+                  </div>
+                  <button className="text-[11px] px-2 py-1 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50">
+                    View all
+                  </button>
                 </div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-gray-900">{comp.name}</div>
-                  <div className="text-xs text-gray-500">{comp.type}</div>
+                <div className="px-4 pb-4">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-[11px]">
+                      <thead>
+                        <tr className="text-slate-500 bg-slate-50 border-b border-slate-100">
+                          <th className="text-left font-medium py-2 pr-4">ID</th>
+                          <th className="text-left font-medium py-2 pr-4">Status</th>
+                          <th className="text-left font-medium py-2 pr-4">Owner</th>
+                          <th className="text-right font-medium py-2 pl-4">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-xs text-slate-700">
+                        {[
+                          {
+                            id: "CLM-121",
+                            status: "In Progress",
+                            owner: "Ops User 1",
+                            amount: "$ 5,320",
+                          },
+                          {
+                            id: "CLM-122",
+                            status: "In Progress",
+                            owner: "Ops User 2",
+                            amount: "$ 5,640",
+                          },
+                          {
+                            id: "CLM-123",
+                            status: "In Progress",
+                            owner: "Ops User 3",
+                            amount: "$ 5,960",
+                          },
+                          {
+                            id: "CLM-124",
+                            status: "At Risk / SLA",
+                            owner: "Ops User 4",
+                            amount: "$ 42,300",
+                          },
+                          {
+                            id: "CLM-125",
+                            status: "SLA Breach",
+                            owner: "Ops User 5",
+                            amount: "$ 110,450",
+                          },
+                          {
+                            id: "CLM-126",
+                            status: "Approved",
+                            owner: "Ops User 6",
+                            amount: "$ 7,890",
+                          },
+                          {
+                            id: "CLM-127",
+                            status: "Denied",
+                            owner: "Ops User 7",
+                            amount: "$ 3,210",
+                          },
+                        ].map((row) => (
+                          <tr
+                            key={row.id}
+                            className="border-b border-slate-100 last:border-0 hover:bg-slate-50 cursor-pointer"
+                          >
+                            <td className="py-2 pr-4 font-medium">{row.id}</td>
+                            <td className="py-2 pr-4">
+                              <span className="text-amber-700 bg-amber-50 rounded-full px-2 py-0.5 text-[11px]">
+                                {row.status}
+                              </span>
+                            </td>
+                            <td className="py-2 pr-4 text-slate-600">{row.owner}</td>
+                            <td className="py-2 pl-4 text-right text-slate-900">
+                              {row.amount}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
+            )}
 
-              {/* Component-specific preview */}
-              {comp.type === "data-table" && (
-                <div className="mt-3 space-y-2">
-                  <div className="h-8 bg-gray-100 rounded"></div>
-                  <div className="h-6 bg-gray-50 rounded"></div>
-                  <div className="h-6 bg-gray-50 rounded"></div>
-                  <div className="h-6 bg-gray-50 rounded"></div>
+            {/* Form controls preview */}
+            {formControls.length > 0 && (
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-4">
+                <div className="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">
+                  Sample Form
                 </div>
-              )}
+                <div className="space-y-3">
+                  {formControls.map((fc) => {
+                    renderedIds.add(fc.id);
+                    const props = fc.props || {};
+                    if (fc.type === "input") {
+                      return (
+                        <div key={fc.id} className="flex flex-col gap-1">
+                          <label className="text-xs font-medium text-slate-700">
+                            {props.label || "Text Input"}
+                          </label>
+                          <input
+                            type={props.type || "text"}
+                            placeholder={props.placeholder || "Enter text..."}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          />
+                        </div>
+                      );
+                    }
+                    if (fc.type === "textarea") {
+                      return (
+                        <div key={fc.id} className="flex flex-col gap-1">
+                          <label className="text-xs font-medium text-slate-700">
+                            {props.label || "Textarea"}
+                          </label>
+                          <textarea
+                            rows={props.rows || 3}
+                            placeholder={props.placeholder || "Enter long text..."}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          />
+                        </div>
+                      );
+                    }
+                    if (fc.type === "dropdown") {
+                      const options =
+                        (props.options || "Option 1, Option 2, Option 3")
+                          .split(",")
+                          .map((o) => o.trim())
+                          .filter(Boolean);
+                      return (
+                        <div key={fc.id} className="flex flex-col gap-1">
+                          <label className="text-xs font-medium text-slate-700">
+                            {props.label || "Dropdown"}
+                          </label>
+                          <select className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                            {options.map((opt, idx) => (
+                              <option key={idx}>{opt}</option>
+                            ))}
+                          </select>
+                        </div>
+                      );
+                    }
+                    if (fc.type === "checkbox") {
+                      return (
+                        <label
+                          key={fc.id}
+                          className="inline-flex items-center gap-2 text-xs text-slate-700"
+                        >
+                          <input
+                            type="checkbox"
+                            defaultChecked={props.checked}
+                            className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span>{props.label || "Checkbox label"}</span>
+                        </label>
+                      );
+                    }
+                    if (fc.type === "radio") {
+                      const options =
+                        (props.options || "Option 1, Option 2, Option 3")
+                          .split(",")
+                          .map((o) => o.trim())
+                          .filter(Boolean);
+                      return (
+                        <div key={fc.id} className="flex flex-col gap-1 text-xs text-slate-700">
+                          <span className="font-medium">
+                            {props.label || "Radio group"}
+                          </span>
+                          <div className="flex flex-wrap gap-3 mt-1">
+                            {options.map((opt, idx) => (
+                              <label key={idx} className="inline-flex items-center gap-1.5">
+                                <input
+                                  type="radio"
+                                  name={fc.id}
+                                  className="h-3.5 w-3.5 border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                <span>{opt}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+                    if (fc.type === "switch") {
+                      return (
+                        <div key={fc.id} className="flex items-center justify-between text-xs">
+                          <span className="text-slate-700">
+                            {props.label || "Toggle switch"}
+                          </span>
+                          <button
+                            type="button"
+                            className={`relative inline-flex h-4 w-7 items-center rounded-full border ${
+                              props.checked
+                                ? "bg-indigo-600 border-indigo-600"
+                                : "bg-slate-200 border-slate-300"
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-3 w-3 transform rounded-full bg-white transition ${
+                                props.checked ? "translate-x-3" : "translate-x-0.5"
+                              }`}
+                            />
+                          </button>
+                        </div>
+                      );
+                    }
+                    if (fc.type === "date-picker") {
+                      return (
+                        <div key={fc.id} className="flex flex-col gap-1">
+                          <label className="text-xs font-medium text-slate-700">
+                            {props.label || "Date"}
+                          </label>
+                          <input
+                            type="date"
+                            className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          />
+                        </div>
+                      );
+                    }
+                    if (fc.type === "slider") {
+                      const min = props.min ?? 0;
+                      const max = props.max ?? 100;
+                      const value = props.defaultValue ?? Math.round((min + max) / 2);
+                      return (
+                        <div key={fc.id} className="flex flex-col gap-1">
+                          <label className="text-xs font-medium text-slate-700">
+                            {props.label || "Slider"}
+                          </label>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="range"
+                              min={min}
+                              max={max}
+                              defaultValue={value}
+                              step={props.step ?? 1}
+                              disabled={props.disabled}
+                              className="flex-1 accent-indigo-600"
+                            />
+                            {props.showValue !== false && (
+                              <span className="text-xs text-slate-600 w-10 text-right">
+                                {value}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+                    if (fc.type === "rating") {
+                      const max = Math.max(1, props.max || 5);
+                      const current = Math.min(max, Math.max(0, props.defaultValue || 0));
+                      return (
+                        <div key={fc.id} className="flex flex-col gap-1">
+                          <label className="text-xs font-medium text-slate-700">
+                            {props.label || "Rating"}
+                          </label>
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: max }).map((_, idx) => {
+                              const filled = idx < current;
+                              return (
+                                <svg
+                                  key={idx}
+                                  className={`w-4 h-4 ${
+                                    filled ? "text-yellow-400" : "text-slate-300"
+                                  }`}
+                                  viewBox="0 0 20 20"
+                                  fill="currentColor"
+                                >
+                                  <path d="M10 1.5l2.39 4.84 5.34.78-3.86 3.76.91 5.32L10 13.77l-4.78 2.63.91-5.32L2.27 7.12l5.34-.78L10 1.5z" />
+                                </svg>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    }
+                    if (fc.type === "button") {
+                      const label = props.label || fc.name || "Button";
+                      const variant = props.variant || "primary";
+                      const base =
+                        "inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium";
+                      const variantClass =
+                        variant === "secondary"
+                          ? "bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
+                          : variant === "outline"
+                          ? "border border-indigo-600 text-indigo-600 bg-white hover:bg-indigo-50"
+                          : "bg-indigo-600 text-white hover:bg-indigo-700";
+                      return (
+                        <button key={fc.id} type="button" className={`${base} ${variantClass}`}>
+                          {label}
+                        </button>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+              </div>
+            )}
 
-              {comp.type === "form" && (
-                <div className="mt-3 space-y-3">
-                  <div className="h-10 bg-gray-50 rounded border border-gray-200"></div>
-                  <div className="h-10 bg-gray-50 rounded border border-gray-200"></div>
-                  <div className="h-10 bg-gray-50 rounded border border-gray-200"></div>
+            {/* Generic preview for any remaining components (charts, cards, etc.) */}
+            {components.some(
+              (c) =>
+                !renderedIds.has(c.id) &&
+                !["app-header", "toolbar", "container", "grid", "section", "side-nav"].includes(c.type)
+            ) && (
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4">
+                <div className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">
+                  Additional Components
                 </div>
-              )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {components
+                    .filter(
+                      (c) =>
+                        !renderedIds.has(c.id) &&
+                        !["app-header", "toolbar", "container", "grid", "section", "side-nav"].includes(c.type)
+                    )
+                    .map((c) => (
+                      <div
+                        key={c.id}
+                        className="border border-slate-200 rounded-lg bg-white px-3 py-2 text-[11px]"
+                      >
+                        <div className="font-semibold text-slate-800 mb-0.5">
+                          {c.name || c.type}
+                        </div>
+                        <div className="text-slate-500">
+                          Preview placeholder for <span className="font-mono">{c.type}</span> component.
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
 
-              {comp.type === "metric-card" && (
-                <div className="mt-3">
-                  <div className="text-2xl font-bold text-gray-900">1,234</div>
-                  <div className="text-xs text-gray-500 mt-1">Metric Value</div>
+          {/* Right side - AI / detail */}
+          <div className="space-y-4">
+            {(reasoningCards[0] || currentPageName.includes("detail") || currentPageName.includes("reasoning")) && (
+              <div className="space-y-3">
+                {/* Intake Agent */}
+                <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className="p-1.5 rounded-lg bg-slate-900 text-white">
+                      <Sparkles className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold text-slate-900">
+                        Intake Agent
+                      </div>
+                      <div className="text-[11px] text-slate-500">
+                        Normalizes claim intake and surfaces key context.
+                      </div>
+                    </div>
+                  </div>
+                  <ul className="mt-1.5 space-y-1 text-[11px] text-slate-700 list-disc list-inside">
+                    <li>Summarizes who, what, when, where for the claim.</li>
+                    <li>Flags missing or inconsistent intake data.</li>
+                    <li>Groups claims by urgency and complexity for the queue.</li>
+                  </ul>
                 </div>
-              )}
 
-              {comp.type === "chart" && (
-                <div className="mt-3 h-32 bg-gradient-to-br from-indigo-50 to-purple-50 rounded flex items-center justify-center">
-                  <Code className="w-8 h-8 text-gray-400" />
+                {/* SOP Reasoning */}
+                <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className="p-1.5 rounded-lg bg-indigo-600 text-white">
+                      <Layers className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold text-slate-900">
+                        SOP Reasoning
+                      </div>
+                      <div className="text-[11px] text-slate-500">
+                        Applies SOP Executor policies and clinical rules.
+                      </div>
+                    </div>
+                  </div>
+                  <ul className="mt-1.5 space-y-1 text-[11px] text-slate-700 list-disc list-inside">
+                    <li>Explains which SOP sections and policies were evaluated.</li>
+                    <li>Shows why the claim meets or fails coverage and medical necessity.</li>
+                    <li>Links directly to the relevant SOP pages in the viewer.</li>
+                  </ul>
                 </div>
-              )}
 
-              {comp.type === "grid" && (
-                <div
-                  className="mt-3 grid gap-2"
-                  style={{
-                    gridTemplateColumns: `repeat(${props.columns || 3}, 1fr)`,
-                    gap: props.gap ? `${props.gap}px` : undefined,
-                  }}
-                >
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-16 bg-gray-100 rounded"></div>
-                  ))}
+                {/* SLA Risk Assessment */}
+                <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className="p-1.5 rounded-lg bg-amber-500 text-white">
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold text-slate-900">
+                        SLA Risk Assessment
+                      </div>
+                      <div className="text-[11px] text-slate-500">
+                        Highlights SLA exposure and next best actions.
+                      </div>
+                    </div>
+                  </div>
+                  <ul className="mt-1.5 space-y-1 text-[11px] text-slate-700 list-disc list-inside">
+                    <li>Calls out Green / Amber / Red SLA status for the claim.</li>
+                    <li>Quantifies late-payment penalty exposure where relevant.</li>
+                    <li>Recommends concrete next steps for adjusters and supervisors.</li>
+                  </ul>
                 </div>
-              )}
+              </div>
+            )}
 
-              {comp.dataBinding && (
-                <div className="mt-2 text-xs text-indigo-600 flex items-center gap-1">
-                  <Database className="w-3 h-3" />
-                  Bound to: {comp.dataBinding}
+            {/* Secondary cards if any */}
+            {metrics.slice(3).map((m) => (
+              <div
+                key={m.id}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-3"
+              >
+                <div className="text-[11px] uppercase tracking-wide text-slate-500">
+                  {m.props?.title || m.name}
                 </div>
-              )}
-            </div>
-          );
-        })
-      )}
+                <div className="mt-1 text-lg font-semibold text-slate-900">
+                  {m.props?.value || "0"}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const navItems =
+    // Prefer explicit side-nav items if present, otherwise fall back to page names
+    sideNavComponent
+      ? sideNavItems
+      : pages && pages.length
+      ? pages.map((p, idx) => p.name || `Page ${idx + 1}`)
+      : sideNavItems;
+
+  const shellClass = fullScreen
+    ? "h-screen w-screen"
+    : "w-full min-h-[520px] rounded-2xl border border-slate-800 overflow-hidden";
+
+  return (
+    <div className={`${shellClass} bg-slate-950 text-slate-100 flex`}>
+      {/* Left sidebar nav */}
+      <aside className="w-56 border-r border-slate-800 flex flex-col">
+        <div className="px-4 py-4 border-b border-slate-800">
+          <div className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
+            FAB App
+          </div>
+          <div className="mt-1 text-sm font-semibold text-white truncate">{appTitle}</div>
+        </div>
+        <nav className="flex-1 py-3 text-xs">
+          {navItems.map((label, index) => {
+            const isActive = index === activePage;
+            return (
+              <button
+                key={index}
+                onClick={() => onNavigatePage && onNavigatePage(index)}
+                className={`w-full flex items-center gap-2 px-4 py-2 text-left transition ${
+                  isActive
+                    ? "bg-slate-800 text-white"
+                    : "text-slate-300 hover:bg-slate-800/60 hover:text-white"
+                }`}
+              >
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-indigo-400" />
+                <span>{label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </aside>
+
+      {/* Main preview area */}
+      <main className="flex-1 overflow-auto">{mainContent}</main>
     </div>
   );
 }
