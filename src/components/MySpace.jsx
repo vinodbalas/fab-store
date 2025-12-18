@@ -239,7 +239,7 @@ export default function MySpace({ onLaunchBuilder, onEditApp, onViewApp }) {
                         className="flex-1 px-3 py-2 rounded-lg bg-[#612D91] text-white text-sm font-medium hover:bg-[#5B2E90] transition-colors"
                       >
                         <Eye className="w-4 h-4 inline mr-1" />
-                        View in Store
+                        Launch App
                       </button>
                       <button
                         onClick={() => onEditApp?.(app)}

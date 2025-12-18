@@ -1,0 +1,308 @@
+PRINTER TROUBLESHOOTING GUIDE
+Version 2.1 | Last Updated: January 2025
+
+================================================================================
+SECTION 1: PRINTER OFFLINE ISSUES
+================================================================================
+
+SYMPTOMS:
+- Printer appears offline in print queue
+- Print jobs remain in queue and do not print
+- Error message: "Printer is offline or not connected"
+- Network printer not discoverable
+
+ROOT CAUSES:
+1. Network connectivity issues
+2. Printer power state
+3. Print spooler service failure
+4. Firewall blocking printer ports
+5. Incorrect printer driver installation
+
+TROUBLESHOOTING STEPS:
+
+Step 1: Verify Physical Connection
+- Ensure printer is powered on (check LED indicators)
+- Verify network cable is securely connected (for wired printers)
+- Check wireless connection status on printer display panel
+- Confirm printer is on the same network segment as the computer
+
+Step 2: Check Network Connectivity
+- Ping printer IP address: ping [printer-ip]
+- Verify printer IP is in correct subnet range
+- Check router/switch port status
+- Review network configuration on printer (Settings > Network > TCP/IP)
+
+Step 3: Restart Print Spooler Service
+Windows:
+1. Open Services (services.msc)
+2. Locate "Print Spooler" service
+3. Right-click > Restart
+4. Verify status shows "Running"
+
+macOS:
+1. Open Terminal
+2. Run: sudo launchctl stop org.cups.cupsd
+3. Run: sudo launchctl start org.cups.cupsd
+
+Step 4: Firewall Configuration
+- Allow ports 9100 (RAW), 515 (LPR), 631 (IPP)
+- Add printer IP to firewall exceptions
+- Temporarily disable firewall to test connectivity
+
+Step 5: Reinstall Printer Driver
+- Download latest driver from manufacturer website
+- Remove existing printer from Devices
+- Install new driver
+- Add printer using "Add Printer" wizard
+- Test print
+
+AUTOMATED RESOLUTION:
+- Script: restart-print-spooler.ps1
+- Command: Restart-Service Spooler
+- Verification: Test-Path \\[printer-ip]\printer
+
+================================================================================
+SECTION 2: INK CARTRIDGE ERRORS
+================================================================================
+
+SYMPTOMS:
+- "Genuine cartridge not recognized" error
+- "Ink cartridge error" message
+- Printer refuses to print despite cartridge being installed
+- Low ink warnings persist after cartridge replacement
+
+ROOT CAUSES:
+1. Non-genuine or incompatible cartridge
+2. Dirty cartridge contacts
+3. Firmware version mismatch
+4. Cartridge chip authentication failure
+5. Cartridge not properly seated
+
+TROUBLESHOOTING STEPS:
+
+Step 1: Verify Cartridge Authenticity
+- Check cartridge packaging for genuine manufacturer logo
+- Verify part number matches printer model requirements
+- Review manufacturer's compatible cartridge list
+- Contact vendor if cartridge authenticity is questionable
+
+Step 2: Clean Cartridge Contacts
+- Power off printer
+- Remove cartridge carefully
+- Use lint-free cloth slightly dampened with distilled water
+- Gently wipe gold contacts on cartridge (do not touch with fingers)
+- Allow to air dry completely (5-10 minutes)
+- Reinstall cartridge firmly until it clicks into place
+
+Step 3: Reset Printer Firmware
+- Access printer settings menu
+- Navigate to: Settings > System > Reset Options
+- Select "Reset to Factory Defaults" (note: this clears all settings)
+- Reconfigure network and basic settings
+- Test cartridge recognition
+
+Step 4: Update Printer Firmware
+- Check current firmware version: Settings > About
+- Visit manufacturer support website
+- Download latest firmware for your model
+- Follow firmware update instructions (ensure stable power during update)
+- After update, remove and reinstall cartridges
+
+Step 5: Cartridge Chip Reset (Advanced)
+- Some cartridges have reset buttons or require chip reset tools
+- Consult manufacturer documentation for chip reset procedures
+- Warning: Resetting chips may void warranty
+
+AUTOMATED RESOLUTION:
+- Script: reset-cartridge-auth.ps1
+- Command: Invoke-PrinterReset -CartridgeAuth
+- Verification: Check printer status page for cartridge recognition
+
+================================================================================
+SECTION 3: PAPER JAM RESOLUTION
+================================================================================
+
+SYMPTOMS:
+- Paper jam error message on printer display
+- Paper stuck in paper path
+- Multiple paper jam errors in succession
+- Printer stops mid-print with jam indication
+
+ROOT CAUSES:
+1. Foreign objects in paper path
+2. Worn or damaged paper rollers
+3. Incorrect paper type or size loaded
+4. Paper path obstruction from previous jam
+5. Paper sensor malfunction
+
+TROUBLESHOOTING STEPS:
+
+Step 1: Power Off and Clear Paper Path
+- Turn off printer immediately
+- Unplug power cord (wait 30 seconds)
+- Open all access panels (front, rear, top)
+- Remove paper trays
+- Gently pull out any visible paper (pull in direction of paper flow, never force)
+- Check for torn paper fragments
+
+Step 2: Inspect Paper Path
+- Use flashlight to inspect entire paper path
+- Look for small paper fragments, labels, or foreign objects
+- Check rollers for damage or debris
+- Verify paper guides are properly aligned
+- Clean any visible debris with lint-free cloth
+
+Step 3: Clean Paper Sensors
+- Locate paper sensors (usually near paper path entry/exit points)
+- Use compressed air to blow out sensor areas
+- Gently clean sensor with cotton swab and isopropyl alcohol
+- Allow sensors to dry completely before testing
+
+Step 4: Verify Paper Loading
+- Use only recommended paper types (check printer manual)
+- Ensure paper is not wrinkled, curled, or damaged
+- Do not exceed maximum paper capacity
+- Align paper stack properly in tray
+- Adjust paper guides to match paper width
+
+Step 5: Test with Different Paper
+- Try printing with different paper type/brand
+- Use plain white paper for testing
+- Verify paper size matches printer settings
+- Check paper weight is within specifications
+
+AUTOMATED RESOLUTION:
+- Script: clear-paper-jam.ps1
+- Command: Reset-PrinterPaperPath
+- Verification: Run printer self-test page
+
+PREVENTION:
+- Use high-quality paper
+- Store paper in dry, flat location
+- Do not mix different paper types in same tray
+- Regularly clean paper path (monthly maintenance)
+
+================================================================================
+SECTION 4: SLOW PRINTING PERFORMANCE
+================================================================================
+
+SYMPTOMS:
+- Print jobs take excessive time to complete
+- Printer processes slowly even for simple documents
+- Network printing significantly slower than local printing
+- Large PDF files cause printer to hang
+
+ROOT CAUSES:
+1. Network bandwidth limitations
+2. Print spooler processing delays
+3. Large file sizes or complex graphics
+4. Printer memory limitations
+5. Driver settings (quality vs. speed)
+
+TROUBLESHOOTING STEPS:
+
+Step 1: Check Network Bandwidth
+- Test network speed: speedtest.net or similar
+- Verify printer is on same network segment
+- Check for network congestion during printing
+- Consider wired connection instead of wireless
+
+Step 2: Optimize Print Settings
+- Reduce print quality (Draft mode for internal documents)
+- Disable "Print in Background" option
+- Select "Print Directly to Printer" (bypass spooler)
+- Reduce color printing (use grayscale when possible)
+
+Step 3: Increase Printer Memory
+- Check current printer memory: Settings > About
+- Install additional RAM if supported
+- Clear printer memory: Settings > System > Clear Memory
+
+Step 4: Optimize Document Before Printing
+- Reduce PDF file size (compress images)
+- Print selected pages instead of entire document
+- Convert complex graphics to simpler formats
+- Use "Print as Image" option for problematic documents
+
+Step 5: Update Printer Driver
+- Download latest driver from manufacturer
+- Install driver updates
+- Check for firmware updates
+- Review driver release notes for performance improvements
+
+AUTOMATED RESOLUTION:
+- Script: optimize-print-performance.ps1
+- Command: Set-PrinterOptimization -Mode Fast
+- Verification: Monitor print job completion time
+
+================================================================================
+SECTION 5: PRINT QUALITY ISSUES
+================================================================================
+
+SYMPTOMS:
+- Streaks or lines on printed pages
+- Faded or light printing
+- Smudges or ink bleeding
+- Color misalignment
+- Blurry text or images
+
+TROUBLESHOOTING STEPS:
+
+Step 1: Run Printer Cleaning Cycle
+- Access printer maintenance menu
+- Select "Clean Print Heads" or "Nozzle Check"
+- Run cleaning cycle (may use significant ink)
+- Print test page to verify improvement
+- Repeat cleaning cycle if needed (max 2-3 times)
+
+Step 2: Check Ink Levels
+- Review ink levels in printer settings
+- Replace low or empty cartridges
+- Ensure cartridges are properly installed
+- Verify cartridge expiration dates
+
+Step 3: Align Print Heads
+- Access printer settings menu
+- Select "Align Print Heads" or "Calibrate"
+- Follow on-screen instructions
+- Print alignment page and scan if required
+- Verify alignment completion
+
+Step 4: Clean Print Heads Manually (Advanced)
+- Power off printer
+- Access print head area (consult manual)
+- Use manufacturer-recommended cleaning solution
+- Gently clean print head nozzles
+- Allow to dry completely before testing
+
+Step 5: Paper Quality Check
+- Use recommended paper type
+- Ensure paper is not damp or wrinkled
+- Check paper weight specifications
+- Try different paper brand/type
+
+AUTOMATED RESOLUTION:
+- Script: clean-print-heads.ps1
+- Command: Invoke-PrinterCleaning -Type Full
+- Verification: Print quality test page
+
+================================================================================
+ESCALATION CRITERIA
+================================================================================
+
+Escalate to Level 2 Support if:
+- Issue persists after all troubleshooting steps
+- Hardware damage is suspected
+- Printer requires physical repair
+- Firmware update fails
+- Multiple components fail simultaneously
+
+Contact Information:
+- Level 2 Support: support@company.com
+- Hardware Repair: repair@company.com
+- Emergency Hotline: 1-800-SUPPORT
+
+================================================================================
+END OF DOCUMENT
+================================================================================
+

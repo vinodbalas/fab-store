@@ -16,7 +16,7 @@ export default function TPInventoryLayout({ children, onNavigate, active }) {
       onNavigate={onNavigate}
       active={active}
       footerText="TP Inventory • Powered by Field Service Platform"
-      showSettings={true}
+      showSettings={false}
     >
       {children}
     </SolutionLayout>

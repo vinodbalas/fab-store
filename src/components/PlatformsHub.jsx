@@ -1,4 +1,4 @@
-import { ArrowLeft, Layers, Zap, CheckCircle, Code, Database, BarChart3, Shield } from "lucide-react";
+import { ArrowLeft, Layers, Zap, CheckCircle, Code, Database, BarChart3, Shield, Activity, Play } from "lucide-react";
 import { fabPlatforms, getEnrichedPlatforms } from "../data/fabPlatforms";
 import { fabApps } from "../data/fabApps";
 
@@ -195,6 +195,104 @@ export default function PlatformsHub({ onBack, onNavigate }) {
             </div>
           </section>
         )}
+
+        {/* Agentic Support Orchestration Platform (FastAPI) */}
+        <section className="mb-12">
+          <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-sm">
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#4C1D95] to-[#7C3AED] flex items-center justify-center shadow-lg">
+                  <Activity className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-900">Agentic Support Orchestration</h2>
+                  <p className="text-gray-600 mt-1">
+                    End-to-end self-healing workflows for device & customer support, powered by FastAPI and modular agents.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-sm font-semibold">
+                  Built
+                </span>
+                <div className="flex flex-wrap gap-1 justify-end">
+                  <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs">FastAPI</span>
+                  <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs">Agentic</span>
+                  <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs">Workflows: 2</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Supported Workflows</h3>
+                <ul className="space-y-2 text-gray-600 text-sm">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-600 mt-0.5" />
+                    <div>
+                      <div className="font-medium">Printer Offline / Not Responding</div>
+                      <div className="text-xs text-gray-500">
+                        Diagnose network, spooler and heartbeat issues. Restart services, rebind IPs, and validate fix via telemetry.
+                      </div>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-600 mt-0.5" />
+                    <div>
+                      <div className="font-medium">Ink Cartridge Not Recognized / Ink Error</div>
+                      <div className="text-xs text-gray-500">
+                        Validate cartridge authenticity, check firmware compatibility, reset state or auto-create replacement shipments.
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">How it works</h3>
+                <ul className="space-y-2 text-gray-600 text-sm">
+                  <li className="flex items-start gap-2">
+                    <Code className="w-4 h-4 text-[#612D91] mt-0.5" />
+                    <span>
+                      Modular agents for <strong>intent detection</strong>, <strong>diagnostics</strong>,{" "}
+                      <strong>action execution</strong>, <strong>verification</strong>, and{" "}
+                      <strong>escalation decision</strong> orchestrated as a state machine.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <BarChart3 className="w-4 h-4 text-[#612D91] mt-0.5" />
+                    <span>
+                      Every step is logged in structured form, enabling rich observability and easy integration with
+                      AI Watchtower dashboards or external analytics.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Database className="w-4 h-4 text-[#612D91] mt-0.5" />
+                    <span>
+                      Exposes clean APIs (
+                      <code className="px-1 py-0.5 bg-gray-100 rounded text-[11px]">/trigger-workflow</code>,{" "}
+                      <code className="px-1 py-0.5 bg-gray-100 rounded text-[11px]">/get-workflow-status</code>,{" "}
+                      <code className="px-1 py-0.5 bg-gray-100 rounded text-[11px]">/simulate-telemetry</code>) for any UI or CCaaS to call.
+                    </span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-4">
+              <div className="text-xs text-gray-500">
+                Built as a dedicated microservice using FastAPI. Ready to plug into contact center, CRM and device telemetry platforms.
+              </div>
+              <button
+                type="button"
+                onClick={() => onNavigate && onNavigate("agentic-support-demo")}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#612D91] text-white text-sm font-semibold hover:bg-[#7B3DA1]"
+              >
+                <Play className="w-4 h-4" />
+                Launch Agentic Demo
+              </button>
+            </div>
+          </div>
+        </section>
 
         {/* How to Build on Platforms */}
         <section className="mb-12">

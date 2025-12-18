@@ -177,5 +177,28 @@ export const fabApps = [
     ctaLabel: "Launch",
     platformId: "field-service",
   },
+  {
+    id: "agentic-support",
+    name: "Agentic Support Console",
+    tagline: "Agentic self-healing for customer and device support",
+    category: "Support Automation",
+    industry: "Cross-Industry",
+    status: "Preview",
+    description:
+      "End-to-end agentic workflows that listen to customer issues, capture live telemetry, run self-healing playbooks, and decide when to escalate—with full traceability.",
+    highlights: ["Voice & chat intent routing", "Self-healing workflows", "AI Watchtower analytics"],
+    tags: ["AI-first", "Agentic", "Live Demo"],
+    accent: "from-[#612D91] to-[#A64AC9]",
+    statusColor: "bg-blue-100 text-blue-700",
+    categoryColor: "text-[#A64AC9]",
+    metrics: [
+      { label: "Self-heal rate", value: "62%" },
+      { label: "Escalations avoided", value: "520/mo" },
+    ],
+    stack: ["Agentic Engine", "FastAPI (simulated)", "TP.ai AI Watchtower"],
+    launchKey: "agentic",
+    ctaLabel: "Launch",
+    platformId: "agentic-support",
+  },
 ];
 

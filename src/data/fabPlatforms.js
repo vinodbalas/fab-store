@@ -2,6 +2,21 @@ import { fabApps } from "./fabApps";
 
 // Calculate platform metrics dynamically
 export function enrichPlatformWithMetrics(platform) {
+  // Special handling for Agentic Support - it has 2 workflows, not traditional solutions
+  if (platform.id === "agentic-support") {
+    return {
+      ...platform,
+      metrics: {
+        solutionCount: 2, // Printer Offline and Ink Error workflows
+        solutions: ["printer_offline", "ink_error"],
+        industries: ["Cross-Industry"],
+        industriesCount: 1,
+        statuses: ["Live"],
+        liveSolutions: 2,
+      },
+    };
+  }
+  
   const solutions = fabApps.filter((app) => app.platformId === platform.id);
   const industries = [...new Set(solutions.map((app) => app.industry))];
   const statuses = [...new Set(solutions.map((app) => app.status))];
@@ -355,6 +370,60 @@ const createFieldServiceAgents = (dataProvider) => {
           },
         ],
       },
+    },
+  },
+  {
+    id: "agentic-support",
+    name: "Agentic Support Orchestration",
+    tagline: "Self-healing workflows for device & customer support",
+    category: "Platform",
+    industry: "Cross-Industry",
+    status: "Live",
+    description:
+      "A backend platform for building modular, agentic workflows that diagnose, self-heal, verify, and escalate customer support issues. Designed for printer and device support today, extensible to broader CX scenarios.",
+    highlights: [
+      "Printer offline & ink error self-heal workflows",
+      "Modular agents for diagnosis, action, verification, escalation",
+      "Structured logging for observability & AI Watchtower",
+      "FastAPI microservice, easy to plug into CCaaS / CRM",
+    ],
+    tags: ["Platform", "Cross-Industry", "Live", "Agentic", "Support"],
+    accent: "from-[#4C1D95] to-[#7C3AED]",
+    statusColor: "bg-emerald-100 text-emerald-700",
+    categoryColor: "text-purple-500",
+    stack: ["FastAPI", "Python", "Agentic Engine", "State Machine"],
+    documentation: {
+      overview:
+        "Agentic Support Orchestration is a FastAPI-based microservice that runs end-to-end self-healing workflows. It separates intent detection, diagnostics, action execution, verification, and escalation into reusable agents orchestrated as a state machine.",
+      features: [
+        "Trigger workflows via clean HTTP APIs",
+        "Agent-per-stage design for diagnosics, actions, verification, escalation",
+        "Support for printer offline and ink cartridge error scenarios",
+        "Structured workflow state for integration with AI Watchtower dashboards",
+      ],
+    },
+    integration: {
+      title: "How to Integrate",
+      steps: [
+        {
+          step: 1,
+          title: "Connect from your UI or CCaaS",
+          description:
+            "Call /trigger-workflow from your chatbot, CCaaS, or support console when a relevant incident is detected.",
+        },
+        {
+          step: 2,
+          title: "Poll for workflow status",
+          description:
+            "Use /get-workflow-status to show live progress in your UI, including diagnosis, actions, verification, and escalation decisions.",
+        },
+        {
+          step: 3,
+          title: "Wire telemetry & entitlements",
+          description:
+            "Use /simulate-telemetry or real device telemetry sources so the agents can make high-quality decisions.",
+        },
+      ],
     },
   },
 ];

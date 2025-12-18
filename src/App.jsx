@@ -32,6 +32,10 @@ import TPDispatchLayout from "./apps/tp-dispatch/components/Layout";
 import TPInventoryHomeDashboard from "./apps/tp-inventory/components/HomeDashboard";
 import TPInventoryLayout from "./apps/tp-inventory/components/Layout";
 import ArchitecturePage from "./components/ArchitecturePage";
+import AgenticSupportLayout from "./apps/agentic-support/components/Layout";
+import AgenticSupportConsole from "./apps/agentic-support/components/Console";
+import AgenticSupportWatchtower from "./apps/agentic-support/components/Watchtower";
+import AgenticSupportKnowledgeBase from "./apps/agentic-support/components/KnowledgeBase";
 
 const SHOW_LEGACY_LOGIN = false;
 
@@ -124,6 +128,9 @@ function AppContent() {
     if (currentPage === "dispatch/worklist") return "dispatch-worklist";
     if (currentPage === "inventory") return "inventory-home";
     if (currentPage === "inventory/list") return "inventory-list";
+    if (currentPage === "agentic") return "agentic";
+    if (currentPage === "agentic/watchtower") return "agentic/watchtower";
+    if (currentPage === "agentic/knowledge-base") return "agentic/knowledge-base";
     return "home"; // Default to home
   };
 
@@ -291,6 +298,47 @@ function AppContent() {
           )}
         </AnimatePresence>
       </TPDispatchLayout>
+    );
+  }
+
+  // Agentic Support shell: console + watchtower + knowledge base
+  if (view === "agentic" || view === "agentic/watchtower" || view === "agentic/knowledge-base") {
+    return (
+      <AgenticSupportLayout onNavigate={handleNavigate} active={currentPage}>
+        <AnimatePresence mode="wait">
+          {view === "agentic/watchtower" ? (
+            <motion.div
+              key="agentic-watchtower"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.4 }}
+            >
+              <AgenticSupportWatchtower onNavigate={handleNavigate} />
+            </motion.div>
+          ) : view === "agentic/knowledge-base" ? (
+            <motion.div
+              key="agentic-knowledge-base"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.4 }}
+            >
+              <AgenticSupportKnowledgeBase onNavigate={handleNavigate} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="agentic-console"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.4 }}
+            >
+              <AgenticSupportConsole onNavigate={handleNavigate} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </AgenticSupportLayout>
     );
   }
 

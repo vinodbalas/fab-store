@@ -7,7 +7,9 @@
  */
 
 // Base API configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/v1';
+const API_BASE_URL = import.meta.env.VITE_OPENAI_API_BASE_URL || 'http://localhost:3001/api/v1';
+// Agentic support (FastAPI) base URL – can be overridden via env when deployed behind a gateway
+const AGENTIC_SUPPORT_URL = import.meta.env.VITE_AGENTIC_SUPPORT_URL || 'http://localhost:8001';
 
 // Helper to get demo mode state
 const getDemoMode = () => {
@@ -511,7 +513,7 @@ export const aiAPI = {
         if (!claim) {
           throw new Error('Claim is required for analysis');
         }
-        const { executeReasoning } = await import('./ai/agents.js');
+        const { executeReasoning } = await import('../apps/cogniclaim/services/ai/agents.js');
         const result = await executeReasoning(claim, onStep);
         return result;
       } else {
@@ -615,7 +617,7 @@ export const aiAPI = {
       
       if (isDemoMode) {
         // Demo mode: use frontend chat agent
-        const { sendChatMessage } = await import('./ai/chatAgent.js');
+        const { sendChatMessage } = await import('../apps/cogniclaim/services/ai/chatAgent.js');
         const response = await sendChatMessage(message, context, onToken);
         return response;
       } else {
@@ -707,6 +709,66 @@ export const aiAPI = {
     } catch (error) {
       console.error('AI chat error:', error);
       throw new Error(error.message || 'Failed to get AI response');
+    }
+  },
+};
+
+/**
+ * Agentic Support Orchestration API
+ * (FastAPI service powering printer offline / ink error self-heal workflows)
+ */
+export const agenticSupportAPI = {
+  /**
+   * Trigger a new agentic workflow run.
+   * @param {object} payload - WorkflowTriggerRequest payload
+   * @returns {Promise<{ workflow_id: string, workflow_type: string, status: string, stage: string, created_at: string }>}
+   */
+  async triggerWorkflow(payload) {
+    try {
+      const response = await fetch(`${AGENTIC_SUPPORT_URL}/trigger-workflow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Agentic Support API error: ${response.status}`);
+      }
+      return response.json();
+    } catch (error) {
+      // If fetch fails (network error, CORS, or service not running), provide helpful error
+      if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+        throw new Error(
+          `Cannot connect to Agentic Support service at ${AGENTIC_SUPPORT_URL}. ` +
+          `Please ensure the FastAPI service is running: ` +
+          `cd backend/agentic_support && uvicorn app.main:app --reload --port 8001`
+        );
+      }
+      throw error;
+    }
+  },
+
+  /**
+   * Retrieve the latest status for a workflow run.
+   * @param {string} workflowId
+   * @returns {Promise<{ workflow: any }>}
+   */
+  async getStatus(workflowId) {
+    try {
+      const response = await fetch(`${AGENTIC_SUPPORT_URL}/get-workflow-status?workflow_id=${encodeURIComponent(workflowId)}`);
+      if (!response.ok) {
+        throw new Error(`Agentic Support API error: ${response.status}`);
+      }
+      return response.json();
+    } catch (error) {
+      // If fetch fails, provide helpful error
+      if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+        throw new Error(
+          `Cannot connect to Agentic Support service at ${AGENTIC_SUPPORT_URL}. ` +
+          `Please ensure the FastAPI service is running.`
+        );
+      }
+      throw error;
     }
   },
 };

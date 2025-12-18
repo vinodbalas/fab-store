@@ -27,6 +27,7 @@ export default function SolutionLayout({
   storageKey = "app",
   footerText = "Powered by Teleperformance • SOP Executor",
   showSettings = true,
+  extraHeaderRight = null,
 }) {
   const { user, logout } = usePageAuth();
   const { isDemoMode } = useDemoMode();
@@ -76,6 +77,9 @@ export default function SolutionLayout({
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Optional extra controls (e.g., Back to Store) */}
+          {extraHeaderRight}
+
           <button
             onClick={() => setDarkMode(!darkMode)}
             className="p-2.5 rounded-2xl transition-all border border-white/40 bg-white/10 backdrop-blur-md shadow-lg hover:bg-white/20"

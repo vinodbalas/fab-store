@@ -11,6 +11,7 @@ import MySpace from "./MySpace";
 import AppBuilder from "./AppBuilder";
 import BuilderDetailPage from "./BuilderDetailPage";
 import PlatformsHub from "./PlatformsHub";
+import AgenticSupportDemo from "./AgenticSupportDemo";
 import KnowledgeHub from "./KnowledgeHub";
 import PricingPage from "./PricingPage";
 import ArchitecturePage from "./ArchitecturePage";
@@ -229,12 +230,22 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
   };
 
   const handleCloneTemplate = (template) => {
+    // Create a new cloned app entry and immediately open it in the builder
     const newClonedTemplates = [...clonedTemplates, template];
     setClonedTemplates(newClonedTemplates);
+
     if (typeof window !== "undefined") {
       localStorage.setItem("fabStore.clonedTemplates", JSON.stringify(newClonedTemplates));
     }
+
     setCloningTemplate(null);
+
+    // Navigate to My Space and open the cloned app in the builder for editing
+    setActiveNav("myspace");
+    if (permissions.canAccessAppBuilder) {
+      setEditingApp(template);
+      setShowBuilder(true);
+    }
   };
 
   const spotlightApps = allApps.slice(0, 2);
@@ -272,50 +283,8 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
           {activeNav === "store" && (
             <>
               <HeroCarousel slides={heroSlides} readOnly={readOnly} onRequestLogin={onRequestLogin} onLaunch={onLaunch} />
-              
-              {/* Platforms Section */}
-              <section className="px-4 md:px-10">
-                <div className="rounded-[32px] bg-white/95 border border-white/40 shadow-[0_45px_85px_rgba(15,10,45,0.15)] p-6 md:p-10 space-y-6 backdrop-blur">
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-xs font-semibold uppercase tracking-[0.35em] text-[#5C36C8]">AI Platforms</div>
-                        <p className="text-sm text-gray-600 mt-1">
-                          Enterprise-grade AI platforms that accelerate application development with intelligent reasoning, orchestration, and compliance. 
-                          Build once, deploy across industries with reusable infrastructure and components.
-                        </p>
-                        <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
-                          <span>2 Live Platforms</span>
-                          <span>•</span>
-                          <span>5 Solutions Built</span>
-                          <span>•</span>
-                          <button
-                            onClick={() => handleSectionNavigate("platforms-hub")}
-                            className="text-[#612D91] hover:text-[#7B3DA1] font-medium transition-colors"
-                          >
-                            Learn More →
-                          </button>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleSectionNavigate("platforms")}
-                        className="text-sm font-semibold text-[#612D91] hover:text-[#7B3DA1] transition-colors flex items-center gap-1"
-                      >
-                        View all platforms
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                    {getEnrichedPlatforms().slice(0, 3).map((platform) => (
-                      <PlatformCard key={platform.id} platform={platform} onSelect={handlePlatformSelect} />
-                    ))}
-                  </div>
-                </div>
-              </section>
-
-              {/* Solutions Section */}
+              {/* Applications Section */}
               <section className="px-4 md:px-10">
                 <div className="rounded-[32px] bg-white/95 border border-white/40 shadow-[0_45px_85px_rgba(15,10,45,0.15)] p-6 md:p-10 space-y-6 backdrop-blur">
                   <div className="flex flex-col gap-3">
@@ -517,8 +486,19 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
                 }
               }}
               onViewApp={(app) => {
-                if (app.launchKey) {
+                // Built-in apps (Cogniclaim, Resolve, Lend, Dispatch, Inventory) use launchKey routing
+                const builtInLaunchKeys = new Set(["home", "resolve", "lend", "dispatch", "inventory"]);
+                const isBuiltIn = builtInLaunchKeys.has(app.launchKey);
+
+                if (isBuiltIn && app.launchKey) {
                   onLaunch?.(app.launchKey);
+                  return;
+                }
+
+                // Custom / builder-created apps: open in AppBuilder so user can run them from there
+                if (permissions.canAccessAppBuilder) {
+                  setEditingApp(app);
+                  setShowBuilder(true);
                 }
               }}
             />
@@ -664,6 +644,14 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
                 handleSectionNavigate("store");
               }} 
               onNavigate={handleSectionNavigate}
+            />
+          )}
+
+          {activeNav === "agentic-support-demo" && (
+            <AgenticSupportDemo
+              onBack={() => {
+                handleSectionNavigate("platforms-hub");
+              }}
             />
           )}
 
@@ -1375,7 +1363,8 @@ function PlatformCard({ platform, onSelect }) {
 function AppCard({ app, onLaunch, readOnly, onRequestLogin, onPlatformClick, onCloneTemplate }) {
   const permissions = usePermissions();
   const platform = app.platformId ? fabPlatforms.find((p) => p.id === app.platformId) : null;
-  
+  const isTemplate = app.status === "Template";
+
   return (
     <div className="rounded-[28px] border border-white/40 bg-white/95 shadow-[0_20px_50px_rgba(18,12,64,0.15)] flex flex-col overflow-hidden">
       <div className={`h-1.5 w-full bg-gradient-to-r ${app.accent}`} />
@@ -1443,16 +1432,27 @@ function AppCard({ app, onLaunch, readOnly, onRequestLogin, onPlatformClick, onC
                 onRequestLogin?.();
                 return;
               }
+
+              // For template cards, primary CTA is to use/clone the template
+              if (isTemplate) {
+                onCloneTemplate?.(app);
+                return;
+              }
+
               if (app.launchKey) {
                 onLaunch?.(app.launchKey);
               }
             }}
             className="inline-flex items-center justify-between rounded-full border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:text-[#612D91] hover:border-[#612D91]/60 transition"
           >
-            {readOnly ? "Sign in to launch" : app.ctaLabel || "Open"}
+            {readOnly
+              ? "Sign in to launch"
+              : isTemplate
+              ? "Use Template"
+              : app.ctaLabel || "Open"}
             <ArrowRight className="w-4 h-4" />
           </button>
-          {!readOnly && permissions.canCloneTemplates && (
+          {!readOnly && permissions.canCloneTemplates && !isTemplate && (
             <button
               type="button"
               onClick={(e) => {

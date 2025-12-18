@@ -889,6 +889,29 @@ const COMPONENT_LIBRARY = {
 
 // AI App Generator - Simulates AI-powered app creation
 async function generateAppFromDescription(description, basicInfo) {
+  // Try LLM-powered generation first
+  try {
+    const { generateAppFromPrompt } = await import("../services/ai/appBuilderAgent");
+    const llmResult = await generateAppFromPrompt(description, basicInfo);
+    
+    if (llmResult && llmResult.entities && llmResult.pages) {
+      // LLM generation succeeded - return it with pages structure
+      return {
+        entities: llmResult.entities,
+        pages: llmResult.pages, // Return pages directly for LLM-generated apps
+        components: llmResult.pages.flatMap((page) => 
+          (page.components || []).map((comp) => ({
+            ...comp,
+            pageTag: page.name.toLowerCase().replace(/\s+/g, "-"),
+          }))
+        ),
+      };
+    }
+  } catch (error) {
+    console.warn("LLM generation failed, falling back to template:", error);
+  }
+
+  // Fall back to template-based generation
   // Simulate AI processing with progress updates
   const steps = [
     { label: "Analyzing requirements...", progress: 10 },
@@ -1168,13 +1191,15 @@ function DroppableCanvas({ children, onDrop }) {
   });
 
   return (
-    <div
-      ref={setNodeRef}
-      className={`min-h-full bg-white rounded-xl border-2 border-dashed p-6 transition-colors ${
-        isOver ? "border-[#612D91] bg-indigo-50" : "border-gray-300"
-      }`}
-    >
-      {children}
+    <div className="min-h-full bg-slate-50 py-4">
+      <div
+        ref={setNodeRef}
+        className={`max-w-6xl mx-auto bg-white rounded-2xl shadow-md border p-6 transition-colors ${
+          isOver ? "border-[#612D91] ring-2 ring-[#612D91]/30" : "border-slate-200"
+        }`}
+      >
+        {children}
+      </div>
     </div>
   );
 }
@@ -1193,26 +1218,22 @@ function DraggableComponent({ id, name, icon: Icon, disabled = false }) {
     : undefined;
 
   return (
-    <div
+    <button
       ref={setNodeRef}
       style={style}
+      type="button"
       {...listeners}
       {...attributes}
-      className={`p-2 rounded-lg border cursor-move transition-all ${
+      className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs cursor-move transition-all ${
         disabled
-          ? "border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed"
+          ? "bg-gray-50 text-gray-300 cursor-not-allowed"
           : isDragging
-          ? "opacity-50 border-[#612D91] bg-indigo-50"
-          : "border-gray-200 hover:border-[#612D91] hover:bg-indigo-50"
+          ? "bg-indigo-50 text-[#612D91]"
+          : "bg-white text-gray-800 hover:bg-indigo-50"
       }`}
     >
-      <div className="flex items-center gap-2">
-        {Icon && <Icon className="w-4 h-4 text-gray-600" />}
-        <div className="flex-1 min-w-0">
-          <div className="text-xs font-medium text-gray-900 truncate">{name}</div>
-        </div>
-      </div>
-    </div>
+      <span className="truncate">{name}</span>
+    </button>
   );
 }
 
@@ -1452,6 +1473,7 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
           activePage={safeIndex}
           onNavigatePage={setPageIndex}
           fullScreen={true}
+          showBuilderChrome={false}
         />
       );
     }
@@ -1496,6 +1518,11 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
                 component={comp}
                 isSelected={selectedComponent?.id === comp.id}
                 onClick={() => setSelectedComponent(comp)}
+                hasChildren={
+                  appData.pages[activePage].components.some(
+                    (child) => (child.parentId ?? null) === comp.id
+                  )
+                }
               />
               {renderComponents(comp.id, depth + 1)}
             </div>
@@ -1530,46 +1557,59 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
       // Generate app structure
       const generated = await generateAppFromDescription(aiDescription, basicInfo);
 
-      // Normalize generated components to ensure parentId is explicitly handled
-      const normalizedComponents = (generated.components || []).map((comp) => ({
-        ...comp,
-        parentId: comp.parentId ?? null,
-      }));
+      // Check if LLM returned pages directly (new format)
+      let pages = [];
+      if (generated.pages && Array.isArray(generated.pages)) {
+        // LLM returned pages directly - use them
+        pages = generated.pages.map((page) => ({
+          name: page.name,
+          components: (page.components || []).map((comp) => ({
+            ...comp,
+            parentId: comp.parentId ?? null,
+          })),
+        }));
+      } else {
+        // Template-based generation - normalize and group by pageTag
+        const normalizedComponents = (generated.components || []).map((comp) => ({
+          ...comp,
+          parentId: comp.parentId ?? null,
+        }));
 
-      // Build multi-page scaffolding aligned to Cogniclaim-style layout
-      const homeComponents = normalizedComponents.filter(
-        (c) => !c.pageTag || c.pageTag === "home"
-      );
-      const claimsComponents = normalizedComponents.filter((c) => c.pageTag === "claims");
-      const detailComponents = normalizedComponents.filter((c) => c.pageTag === "claim-detail");
-      const slaComponents = normalizedComponents.filter(
-        (c) => c.pageTag === "sla" || c.pageTag === "sla-insights-section"
-      );
-      const knowledgeComponents = normalizedComponents.filter((c) => c.pageTag === "knowledge");
+        // Build multi-page scaffolding aligned to Cogniclaim-style layout
+        const homeComponents = normalizedComponents.filter(
+          (c) => !c.pageTag || c.pageTag === "home" || c.pageTag === "ai-watchtower"
+        );
+        const claimsComponents = normalizedComponents.filter((c) => c.pageTag === "claims");
+        const detailComponents = normalizedComponents.filter((c) => c.pageTag === "claim-detail" || c.pageTag === "ai-reasoning");
+        const slaComponents = normalizedComponents.filter(
+          (c) => c.pageTag === "sla" || c.pageTag === "sla-insights-section" || c.pageTag === "sla-and-operations"
+        );
+        const knowledgeComponents = normalizedComponents.filter((c) => c.pageTag === "knowledge" || c.pageTag === "knowledge-hub");
 
-      let pages = [
-        { name: "AI Watchtower", components: homeComponents },
-        {
-          name: "Claims",
-          components: claimsComponents.length ? claimsComponents : homeComponents,
-        },
-        {
-          name: "AI Reasoning",
-          components: detailComponents.length ? detailComponents : homeComponents,
-        },
-        {
-          name: "SLA and Operations",
-          components: slaComponents.length ? slaComponents : homeComponents,
-        },
-        {
-          name: "Knowledge Hub",
-          components: knowledgeComponents.length ? knowledgeComponents : homeComponents,
-        },
-        {
-          name: "Settings",
-          components: [],
-        },
-      ];
+        pages = [
+          { name: "AI Watchtower", components: homeComponents },
+          {
+            name: "Claims",
+            components: claimsComponents.length ? claimsComponents : homeComponents,
+          },
+          {
+            name: "AI Reasoning",
+            components: detailComponents.length ? detailComponents : homeComponents,
+          },
+          {
+            name: "SLA and Operations",
+            components: slaComponents.length ? slaComponents : homeComponents,
+          },
+          {
+            name: "Knowledge Hub",
+            components: knowledgeComponents.length ? knowledgeComponents : homeComponents,
+          },
+          {
+            name: "Settings",
+            components: [],
+          },
+        ];
+      }
 
       // Try to align page names to nav items explicitly listed in the prompt
       try {
@@ -2023,9 +2063,39 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-        {/* Left Sidebar - Component Library & Data Model */}
+        {/* Left Sidebar - Pages, Data Model & Component Library */}
         <div className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
           <div className="p-4 space-y-4">
+            {/* Pages Section */}
+            <div>
+              <div className="text-[10px] font-semibold text-gray-500 tracking-[0.18em] uppercase mb-2">
+                Pages
+              </div>
+              <div className="space-y-1">
+                {appData.pages.map((page, index) => {
+                  const isActive = index === activePage;
+                  return (
+                    <button
+                      key={page.name || index}
+                      onClick={() => {
+                        setActivePage(index);
+                        setSelectedComponent(null);
+                      }}
+                      type="button"
+                      className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs text-left transition-colors ${
+                        isActive
+                          ? "bg-[#612D91]/10 text-[#612D91] border border-[#612D91]/40"
+                          : "bg-transparent text-gray-700 hover:bg-gray-50 border border-transparent"
+                      }`}
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span className="truncate">{page.name || `Page ${index + 1}`}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Data Model Section */}
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -2499,37 +2569,6 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
             viewMode === "split" ? "flex" : ""
           }`}
         >
-          {/* Page Tabs */}
-          <div className="px-6 pt-4 pb-2 flex items-center justify-between border-b border-gray-200 bg-gray-50 sticky top-0 z-10">
-            <div className="flex items-center gap-2 flex-wrap">
-              {appData.pages.map((page, index) => {
-                const isActive = index === activePage;
-                return (
-                  <button
-                    key={page.name || index}
-                    onClick={() => {
-                      setActivePage(index);
-                      setSelectedComponent(null);
-                    }}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                      isActive
-                        ? "bg-white text-gray-900 shadow-sm border border-gray-300"
-                        : "bg-transparent text-gray-500 hover:bg-white/70 hover:text-gray-900 border border-transparent"
-                    }`}
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                    <span>{page.name || `Page ${index + 1}`}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="hidden md:flex items-center gap-2 text-[11px] text-gray-500">
-              <span className="uppercase tracking-[0.2em]">Page</span>
-              <span className="font-semibold text-gray-700">
-                {appData.pages[activePage]?.name || "Untitled"}
-              </span>
-            </div>
-          </div>
           {/* Canvas View */}
           {(viewMode === "canvas" || viewMode === "split") && (
             <div
@@ -2724,14 +2763,16 @@ export default function AppBuilder({ app: existingApp, onClose, onSave }) {
 }
 
 // Component Preview
-function ComponentPreview({ component, isSelected, onClick }) {
+function ComponentPreview({ component, isSelected, onClick, hasChildren = false }) {
   const componentDef = Object.values(COMPONENT_LIBRARY)
     .flatMap((cat) => Object.entries(cat))
     .find(([key]) => key === component.type)?.[1];
 
-  const Icon = componentDef?.icon || Layers;
-  const isContainerType = ["container", "section", "grid", "card"].includes(component.type);
+  const isContainerType = ["container", "section", "grid", "card", "app-header"].includes(
+    component.type
+  );
   const props = component.props || {};
+  const styleProps = component.style || {};
   const isSideNav = component.type === "side-nav";
   const { setNodeRef, isOver } = useDroppable({
     id: `drop-${component.id}`,
@@ -2739,8 +2780,8 @@ function ComponentPreview({ component, isSelected, onClick }) {
   });
 
   const wrapperBase =
-    "rounded-lg border-2 cursor-pointer transition-all bg-white";
-  const wrapperSelected = isSelected ? "border-[#612D91] bg-indigo-50" : "border-gray-200 hover:border-gray-300";
+    "rounded-lg border cursor-pointer transition-all bg-white";
+  const wrapperSelected = isSelected ? "border-[#612D91] shadow-sm" : "border-gray-200 hover:border-gray-300";
   const wrapperOver =
     isOver && isContainerType ? "border-dashed border-[#612D91]" : "";
 
@@ -2757,24 +2798,62 @@ function ComponentPreview({ component, isSelected, onClick }) {
       ref={isContainerType ? setNodeRef : null}
       className={`${wrapperBase} ${wrapperSelected} ${wrapperOver} ${sideNavWrapper}`}
     >
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-lg bg-gray-100">
-          <Icon className="w-5 h-5 text-gray-600" />
-        </div>
-        <div className="flex-1">
-          <div className="font-medium text-gray-900">{component.name}</div>
-          <div className="text-xs text-gray-500">{component.type}</div>
-          {component.dataBinding && (
-            <div className="text-xs text-indigo-600 mt-1">Bound to: {component.dataBinding}</div>
-          )}
-        </div>
-      </div>
       {/* Inline control preview so canvas feels like real UI */}
-      <div className="mt-3 text-xs">
-        {/* Layout containers */}
-        {isContainerType && !isSideNav && (
-          <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-2 text-[11px] text-gray-500">
-            Drop components here
+      <div className="text-xs">
+        {/* Layout: App Header */}
+        {component.type === "app-header" && (
+          <div className="flex items-center justify-between px-4 py-2.5 bg-gray-900 rounded-md">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-md bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white">
+                LOGO
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[11px] font-semibold text-white">
+                  {props.title || "Application Header"}
+                </span>
+                <span className="text-[10px] text-gray-300">Branding · Nav · Avatar</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-2 text-[10px] text-gray-300">
+                <span>Home</span>
+                <span>·</span>
+                <span>Worklist</span>
+                <span>·</span>
+                <span>AI Watchtower</span>
+              </div>
+              <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-[10px] text-gray-100">
+                VK
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Layout containers / sections */}
+        {["container", "section", "card"].includes(component.type) && !isSideNav && !hasChildren && (
+          <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-[11px] text-gray-500 text-left">
+            {component.type === "section" ? "Section – drop cards, grids, or forms here" : "Container – drop layout or UI controls here"}
+          </div>
+        )}
+
+        {/* Layout: Grid skeleton when empty */}
+        {component.type === "grid" && !hasChildren && (
+          <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 px-3 py-3">
+            <div
+              className="grid gap-3"
+              style={{
+                gridTemplateColumns: `repeat(${props.columns || 3}, minmax(0, 1fr))`,
+              }}
+            >
+              {Array.from({ length: props.columns || 3 }).map((_, idx) => (
+                <div
+                  key={idx}
+                  className="h-10 rounded-md border border-gray-200 bg-white flex items-center justify-center text-[11px] text-gray-400"
+                >
+                  Column {idx + 1}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -2785,9 +2864,16 @@ function ComponentPreview({ component, isSelected, onClick }) {
               <div className="px-3 pb-2 text-[10px] uppercase tracking-wide text-gray-400">
                 Navigation
               </div>
-              {(props.items || "Home, Claims, AI Watchtower, SLA & Operations")
-                .split(",")
-                .map((item, idx) => (
+              {(() => {
+                // Allow items to be string or array; normalize to array of labels
+                const raw = props.items ?? "Home, Claims, AI Watchtower, SLA & Operations";
+                const labels = Array.isArray(raw)
+                  ? raw
+                  : String(raw)
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean);
+                return labels.map((item, idx) => (
                   <div
                     key={idx}
                     className={`px-3 py-1 ${
@@ -2796,9 +2882,10 @@ function ComponentPreview({ component, isSelected, onClick }) {
                         : "text-gray-300 hover:bg-gray-800/60"
                     }`}
                   >
-                    {item.trim()}
+                    {item}
                   </div>
-                ))}
+                ));
+              })()}
             </div>
             <div className="flex-1 bg-white py-3 px-4 text-gray-400">
               Page content
@@ -2883,12 +2970,105 @@ function ComponentPreview({ component, isSelected, onClick }) {
           />
         )}
         {component.type === "button" && (
-          <button
-            type="button"
-            className="inline-flex items-center justify-center px-3 py-1.5 rounded-md bg-[#612D91] text-white text-xs font-medium hover:bg-[#7B3DA1]"
+          <div
+            className={`flex ${
+              styleProps.textAlign === "center"
+                ? "justify-center"
+                : styleProps.textAlign === "right"
+                ? "justify-end"
+                : "justify-start"
+            }`}
           >
-            {props.label || component.name || "Button"}
-          </button>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center px-3 py-1.5 rounded-md bg-[#612D91] text-white text-xs font-medium hover:bg-[#7B3DA1]"
+            >
+              {props.label || component.name || "Button"}
+            </button>
+          </div>
+        )}
+
+        {/* Data display previews */}
+        {component.type === "metric-card" && (
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+            <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1">
+              Metric Card
+            </div>
+            <div className="text-lg font-semibold text-slate-900">1,234</div>
+            <div className="text-[11px] text-slate-500">Metric value</div>
+          </div>
+        )}
+        {component.type === "data-table" && (
+          <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+            <div className="px-3 py-1.5 border-b border-slate-100 text-[11px] font-semibold text-slate-700">
+              Data Table
+            </div>
+            <table className="min-w-full text-[11px]">
+              <thead className="bg-slate-50 text-slate-500">
+                <tr>
+                  <th className="px-3 py-1 text-left font-medium">ID</th>
+                  <th className="px-3 py-1 text-left font-medium">Status</th>
+                  <th className="px-3 py-1 text-left font-medium">Owner</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                <tr>
+                  <td className="px-3 py-1">REC-101</td>
+                  <td className="px-3 py-1">Open</td>
+                  <td className="px-3 py-1">User 1</td>
+                </tr>
+                <tr>
+                  <td className="px-3 py-1">REC-102</td>
+                  <td className="px-3 py-1">In Progress</td>
+                  <td className="px-3 py-1">User 2</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Charts */}
+        {component.type === "bar-chart" && (
+          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+            <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1">
+              Bar Chart
+            </div>
+            <div className="h-24 flex items-end gap-1.5">
+              {[35, 70, 50, 90, 60].map((h, idx) => (
+                <div
+                  key={idx}
+                  className="flex-1 rounded-t-md bg-indigo-500"
+                  style={{ height: `${h}%` }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+        {component.type === "line-chart" && (
+          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+            <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1">
+              Line Chart
+            </div>
+            <div className="h-24 relative">
+              <svg viewBox="0 0 100 40" className="w-full h-full text-indigo-500">
+                <polyline
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  points="0,30 15,20 30,25 45,10 60,18 75,8 90,15 100,5"
+                />
+                {[0, 15, 30, 45, 60, 75, 90, 100].map((x, idx) => (
+                  <circle
+                    key={idx}
+                    cx={x}
+                    cy={[30, 20, 25, 10, 18, 8, 15, 5][idx]}
+                    r="1.3"
+                    className="fill-indigo-500"
+                  />
+                ))}
+              </svg>
+            </div>
+          </div>
         )}
       </div>
     </motion.div>
@@ -2902,6 +3082,7 @@ function EnhancedPropertyPanel({ component, appData, activePage, dataModel, onUp
     .find(([key]) => key === component.type)?.[1];
 
   const properties = componentDef?.properties || {};
+  const styleProps = component.style || {};
 
   return (
     <div className="space-y-4">
@@ -3043,6 +3224,76 @@ function EnhancedPropertyPanel({ component, appData, activePage, dataModel, onUp
                 )}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Generic Styles for layout / button components */}
+      {["container", "section", "card", "grid", "button"].includes(component.type) && (
+        <div className="border-t border-gray-200 pt-4">
+          <h4 className="text-xs font-semibold text-gray-700 mb-3 uppercase">Styles</h4>
+          <div className="space-y-3">
+            {component.type === "button" && (
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Text Align
+                </label>
+                <div className="flex gap-1">
+                  {["left", "center", "right"].map((align) => (
+                    <button
+                      key={align}
+                      type="button"
+                      onClick={() =>
+                        onUpdate({
+                          ...component,
+                          style: { ...styleProps, textAlign: align },
+                        })
+                      }
+                      className={`flex-1 px-2 py-1 rounded border text-xs ${
+                        styleProps.textAlign === align
+                          ? "bg-[#612D91] text-white border-[#612D91]"
+                          : "bg-white text-gray-700 border-gray-300"
+                      }`}
+                    >
+                      {align.charAt(0).toUpperCase() + align.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {["container", "section", "card"].includes(component.type) && (
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Content Justification
+                </label>
+                <div className="flex gap-1">
+                  {[
+                    { key: "start", label: "Start" },
+                    { key: "center", label: "Center" },
+                    { key: "end", label: "End" },
+                  ].map(({ key, label }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() =>
+                        onUpdate({
+                          ...component,
+                          style: { ...styleProps, justify: key },
+                        })
+                      }
+                      className={`flex-1 px-2 py-1 rounded border text-xs ${
+                        styleProps.justify === key
+                          ? "bg-[#612D91] text-white border-[#612D91]"
+                          : "bg-white text-gray-700 border-gray-300"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -3589,6 +3840,7 @@ function LivePreview({
   onNavigatePage,
   onOpenFullPreview,
   fullScreen = false,
+  showBuilderChrome = true,
 }) {
   if (components.length === 0) {
     return (
@@ -3604,6 +3856,9 @@ function LivePreview({
   const toolbar = components.find((c) => c.type === "toolbar");
   const metrics = components.filter((c) => c.type === "metric-card");
   const tables = components.filter((c) => c.type === "data-table");
+  const charts = components.filter((c) =>
+    ["bar-chart", "line-chart"].includes(c.type)
+  );
   const reasoningCards = components.filter((c) => c.type === "sop-reasoning-card");
   const formControls = components.filter((c) =>
     ["button", "input", "textarea", "dropdown", "checkbox", "radio", "switch", "date-picker", "slider", "rating"].includes(
@@ -3629,6 +3884,7 @@ function LivePreview({
   const renderedIds = new Set();
   metrics.forEach((m) => renderedIds.add(m.id));
   tables.forEach((t) => renderedIds.add(t.id));
+  charts.forEach((c) => renderedIds.add(c.id));
   reasoningCards.forEach((r) => renderedIds.add(r.id));
   formControls.forEach((f) => renderedIds.add(f.id));
 
@@ -3649,16 +3905,20 @@ function LivePreview({
               <Layers className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-300">
-                FAB Builder Preview
-              </div>
+              {showBuilderChrome && (
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-300">
+                  FAB Builder Preview
+                </div>
+              )}
               <div className="text-sm font-semibold">{appTitle}</div>
             </div>
           </div>
-          <div className="flex items-center gap-3 text-xs text-slate-200">
-            <span>Demo User</span>
-            <div className="h-7 w-7 rounded-full bg-slate-700" />
-          </div>
+          {showBuilderChrome && (
+            <div className="flex items-center gap-3 text-xs text-slate-200">
+              <span>Demo User</span>
+              <div className="h-7 w-7 rounded-full bg-slate-700" />
+            </div>
+          )}
         </div>
 
         {/* Toolbar */}
@@ -3680,7 +3940,7 @@ function LivePreview({
 
         {/* Main content */}
         <div className="px-6 py-5 grid grid-cols-1 lg:grid-cols-[2fr,1.1fr] gap-5">
-          {/* Left side - KPIs + Table + Form controls */}
+          {/* Left side - KPIs + Charts + Table + Form controls */}
           <div className="space-y-4">
             {/* KPI Row */}
             {(metrics.length > 0 || currentPageName.includes("sla")) && (
@@ -3731,6 +3991,57 @@ function LivePreview({
               </div>
             )}
 
+            {/* Charts row (bar/line) */}
+            {charts.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {charts.slice(0, 2).map((ch) => {
+                  const isBar = ch.type === "bar-chart";
+                  const title = ch.props?.title || (isBar ? "Bar Chart" : "Line Chart");
+                  return (
+                    <div
+                      key={ch.id}
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-3"
+                    >
+                      <div className="text-[11px] font-semibold text-slate-700 mb-1.5">
+                        {title}
+                      </div>
+                      {isBar ? (
+                        <div className="h-28 flex items-end gap-1.5">
+                          {[35, 70, 50, 90, 60].map((h, idx) => (
+                            <div
+                              key={idx}
+                              className="flex-1 rounded-t-md bg-indigo-500/80"
+                              style={{ height: `${h}%` }}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="h-28 relative">
+                          <svg viewBox="0 0 100 40" className="w-full h-full text-indigo-500">
+                            <polyline
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              points="0,30 15,20 30,25 45,10 60,18 75,8 90,15 100,5"
+                            />
+                            {[0, 15, 30, 45, 60, 75, 90, 100].map((x, idx) => (
+                              <circle
+                                key={idx}
+                                cx={x}
+                                cy={[30, 20, 25, 10, 18, 8, 15, 5][idx]}
+                                r="1.3"
+                                className="fill-indigo-500"
+                              />
+                            ))}
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {/* Primary table */}
             {tables[0] && (
               <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
@@ -3758,70 +4069,45 @@ function LivePreview({
                           <th className="text-left font-medium py-2 pr-4">ID</th>
                           <th className="text-left font-medium py-2 pr-4">Status</th>
                           <th className="text-left font-medium py-2 pr-4">Owner</th>
-                          <th className="text-right font-medium py-2 pl-4">Amount</th>
+                          <th className="text-right font-medium py-2 pl-4">Value</th>
                         </tr>
                       </thead>
                       <tbody className="text-xs text-slate-700">
-                        {[
-                          {
-                            id: "CLM-121",
-                            status: "In Progress",
-                            owner: "Ops User 1",
-                            amount: "$ 5,320",
-                          },
-                          {
-                            id: "CLM-122",
-                            status: "In Progress",
-                            owner: "Ops User 2",
-                            amount: "$ 5,640",
-                          },
-                          {
-                            id: "CLM-123",
-                            status: "In Progress",
-                            owner: "Ops User 3",
-                            amount: "$ 5,960",
-                          },
-                          {
-                            id: "CLM-124",
-                            status: "At Risk / SLA",
-                            owner: "Ops User 4",
-                            amount: "$ 42,300",
-                          },
-                          {
-                            id: "CLM-125",
-                            status: "SLA Breach",
-                            owner: "Ops User 5",
-                            amount: "$ 110,450",
-                          },
-                          {
-                            id: "CLM-126",
-                            status: "Approved",
-                            owner: "Ops User 6",
-                            amount: "$ 7,890",
-                          },
-                          {
-                            id: "CLM-127",
-                            status: "Denied",
-                            owner: "Ops User 7",
-                            amount: "$ 3,210",
-                          },
-                        ].map((row) => (
-                          <tr
-                            key={row.id}
-                            className="border-b border-slate-100 last:border-0 hover:bg-slate-50 cursor-pointer"
-                          >
-                            <td className="py-2 pr-4 font-medium">{row.id}</td>
-                            <td className="py-2 pr-4">
-                              <span className="text-amber-700 bg-amber-50 rounded-full px-2 py-0.5 text-[11px]">
-                                {row.status}
-                              </span>
-                            </td>
-                            <td className="py-2 pr-4 text-slate-600">{row.owner}</td>
-                            <td className="py-2 pl-4 text-right text-slate-900">
-                              {row.amount}
-                            </td>
-                          </tr>
-                        ))}
+                        {(() => {
+                          const binding = (tables[0].dataBinding || "Item").toString();
+                          const prefix = binding
+                            ? binding
+                                .replace(/[^a-z0-9]/gi, "")
+                                .slice(0, 3)
+                                .toUpperCase()
+                            : "REC";
+                          const rows = [
+                            { id: `${prefix}-101`, status: "Open", owner: "User 1", value: "High" },
+                            { id: `${prefix}-102`, status: "In Progress", owner: "User 2", value: "Medium" },
+                            { id: `${prefix}-103`, status: "In Progress", owner: "User 3", value: "Low" },
+                            { id: `${prefix}-104`, status: "Flagged", owner: "User 4", value: "High" },
+                            { id: `${prefix}-105`, status: "Resolved", owner: "User 5", value: "Medium" },
+                            { id: `${prefix}-106`, status: "Closed", owner: "User 6", value: "Low" },
+                            { id: `${prefix}-107`, status: "Reopened", owner: "User 7", value: "Medium" },
+                          ];
+                          return rows.map((row) => (
+                            <tr
+                              key={row.id}
+                              className="border-b border-slate-100 last:border-0 hover:bg-slate-50 cursor-pointer"
+                            >
+                              <td className="py-2 pr-4 font-medium">{row.id}</td>
+                              <td className="py-2 pr-4">
+                                <span className="text-amber-700 bg-amber-50 rounded-full px-2 py-0.5 text-[11px]">
+                                  {row.status}
+                                </span>
+                              </td>
+                              <td className="py-2 pr-4 text-slate-600">{row.owner}</td>
+                              <td className="py-2 pl-4 text-right text-slate-900">
+                                {row.value}
+                              </td>
+                            </tr>
+                          ));
+                        })()}
                       </tbody>
                     </table>
                   </div>
@@ -4022,6 +4308,7 @@ function LivePreview({
                     if (fc.type === "button") {
                       const label = props.label || fc.name || "Button";
                       const variant = props.variant || "primary";
+                      const styleProps = fc.style || {};
                       const base =
                         "inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium";
                       const variantClass =
@@ -4030,10 +4317,18 @@ function LivePreview({
                           : variant === "outline"
                           ? "border border-indigo-600 text-indigo-600 bg-white hover:bg-indigo-50"
                           : "bg-indigo-600 text-white hover:bg-indigo-700";
+                      const justify =
+                        styleProps.textAlign === "center"
+                          ? "justify-center"
+                          : styleProps.textAlign === "right"
+                          ? "justify-end"
+                          : "justify-start";
                       return (
-                        <button key={fc.id} type="button" className={`${base} ${variantClass}`}>
-                          {label}
-                        </button>
+                        <div key={fc.id} className={`flex ${justify}`}>
+                          <button type="button" className={`${base} ${variantClass}`}>
+                            {label}
+                          </button>
+                        </div>
                       );
                     }
                     return null;
@@ -4079,73 +4374,45 @@ function LivePreview({
 
           {/* Right side - AI / detail */}
           <div className="space-y-4">
-            {(reasoningCards[0] || currentPageName.includes("detail") || currentPageName.includes("reasoning")) && (
+            {/* Render actual reasoning cards if present */}
+            {reasoningCards.length > 0 && (
               <div className="space-y-3">
-                {/* Intake Agent */}
-                <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="p-1.5 rounded-lg bg-slate-900 text-white">
-                      <Sparkles className="w-3.5 h-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold text-slate-900">
-                        Intake Agent
+                {reasoningCards.map((card) => {
+                  const props = card.props || {};
+                  const cardName = card.name || "AI Reasoning";
+                  const description = props.description || "AI-powered analysis and insights.";
+                  
+                  return (
+                    <div key={card.id} className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <div className="p-1.5 rounded-lg bg-indigo-600 text-white">
+                          <Sparkles className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-semibold text-slate-900">
+                            {cardName}
+                          </div>
+                          <div className="text-[11px] text-slate-500">
+                            {description}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-[11px] text-slate-500">
-                        Normalizes claim intake and surfaces key context.
-                      </div>
+                      {props.details && (
+                        <div className="mt-1.5 text-[11px] text-slate-700">
+                          {typeof props.details === "string" ? (
+                            <p>{props.details}</p>
+                          ) : Array.isArray(props.details) ? (
+                            <ul className="space-y-1 list-disc list-inside">
+                              {props.details.map((item, idx) => (
+                                <li key={idx}>{item}</li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <ul className="mt-1.5 space-y-1 text-[11px] text-slate-700 list-disc list-inside">
-                    <li>Summarizes who, what, when, where for the claim.</li>
-                    <li>Flags missing or inconsistent intake data.</li>
-                    <li>Groups claims by urgency and complexity for the queue.</li>
-                  </ul>
-                </div>
-
-                {/* SOP Reasoning */}
-                <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="p-1.5 rounded-lg bg-indigo-600 text-white">
-                      <Layers className="w-3.5 h-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold text-slate-900">
-                        SOP Reasoning
-                      </div>
-                      <div className="text-[11px] text-slate-500">
-                        Applies SOP Executor policies and clinical rules.
-                      </div>
-                    </div>
-                  </div>
-                  <ul className="mt-1.5 space-y-1 text-[11px] text-slate-700 list-disc list-inside">
-                    <li>Explains which SOP sections and policies were evaluated.</li>
-                    <li>Shows why the claim meets or fails coverage and medical necessity.</li>
-                    <li>Links directly to the relevant SOP pages in the viewer.</li>
-                  </ul>
-                </div>
-
-                {/* SLA Risk Assessment */}
-                <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="p-1.5 rounded-lg bg-amber-500 text-white">
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold text-slate-900">
-                        SLA Risk Assessment
-                      </div>
-                      <div className="text-[11px] text-slate-500">
-                        Highlights SLA exposure and next best actions.
-                      </div>
-                    </div>
-                  </div>
-                  <ul className="mt-1.5 space-y-1 text-[11px] text-slate-700 list-disc list-inside">
-                    <li>Calls out Green / Amber / Red SLA status for the claim.</li>
-                    <li>Quantifies late-payment penalty exposure where relevant.</li>
-                    <li>Recommends concrete next steps for adjusters and supervisors.</li>
-                  </ul>
-                </div>
+                  );
+                })}
               </div>
             )}
 

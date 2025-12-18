@@ -1,0 +1,405 @@
+HARDWARE DIAGNOSTICS & TROUBLESHOOTING GUIDE
+Version 2.0 | Last Updated: January 2025
+
+================================================================================
+SECTION 1: DISPLAY & MONITOR ISSUES
+================================================================================
+
+SYMPTOMS:
+- Blank or black screen
+- Flickering display
+- Distorted or garbled image
+- Wrong resolution or colors
+- Monitor not detected
+
+ROOT CAUSES:
+1. Loose or damaged video cable
+2. Faulty graphics card or driver
+3. Monitor power or backlight failure
+4. Incorrect display settings
+5. Hardware incompatibility
+
+TROUBLESHOOTING STEPS:
+
+Step 1: Check Physical Connections
+- Verify video cable is securely connected at both ends
+- Check cable for visible damage (bent pins, fraying)
+- Try different video cable if available
+- Test different video port (HDMI, DisplayPort, VGA)
+- Ensure monitor power cable is connected
+
+Step 2: Test Monitor Independently
+- Connect monitor to different device
+- Verify monitor works with other source
+- Check monitor on-screen display (OSD) menu
+- Test monitor with different cable
+- If monitor fails on all devices, monitor is faulty
+
+Step 3: Update Graphics Driver
+- Check current graphics driver version
+- Download latest driver from manufacturer
+- Uninstall old driver completely
+- Install new driver
+- Restart device after driver installation
+
+Step 4: Check Display Settings
+- Access display settings (right-click desktop > Display Settings)
+- Verify correct monitor is selected
+- Check resolution matches monitor native resolution
+- Test different refresh rates
+- Reset display settings to default
+
+Step 5: Test Graphics Card
+- Check graphics card is properly seated in slot
+- Verify graphics card power connectors
+- Test with integrated graphics if available
+- Check graphics card temperature (overheating)
+- Replace graphics card if hardware failure
+
+AUTOMATED RESOLUTION:
+- Script: test-display-hardware.ps1
+- Command: Test-DisplayAdapter -AdapterName "NVIDIA"
+- Verification: Get-DisplayConfiguration
+
+================================================================================
+SECTION 2: KEYBOARD & MOUSE PROBLEMS
+================================================================================
+
+SYMPTOMS:
+- Keys not responding
+- Mouse cursor not moving
+- Intermittent input issues
+- Wrong characters typed
+- Input device not recognized
+
+ROOT CAUSES:
+1. USB port failure
+2. Driver issues
+3. Physical damage to device
+4. Wireless connectivity problems
+5. Power/battery issues (wireless devices)
+
+TROUBLESHOOTING STEPS:
+
+Step 1: Check USB Connection
+- Try different USB port
+- Test USB port with other device
+- Check USB cable for damage
+- Try USB 2.0 port if using USB 3.0
+- Verify USB port is not disabled in BIOS
+
+Step 2: Test Device on Different Computer
+- Connect keyboard/mouse to different device
+- Verify device works on other computer
+- If works elsewhere, issue is with original device
+- If fails on both, device is likely faulty
+- Note which device has the problem
+
+Step 3: Update Input Device Drivers
+- Open Device Manager
+- Locate keyboard/mouse under "Keyboards" or "Mice"
+- Right-click > Update driver
+- Search automatically for drivers
+- Restart device after driver update
+
+Step 4: Check Wireless Connectivity (If Applicable)
+- Verify wireless receiver is connected
+- Check receiver is within range
+- Replace batteries in wireless device
+- Re-sync wireless device with receiver
+- Check for interference from other devices
+
+Step 5: Clean Input Device
+- Power off device
+- Clean keyboard keys with compressed air
+- Remove keycaps and clean underneath (if mechanical)
+- Clean mouse sensor with lint-free cloth
+- Check for stuck keys or buttons
+
+AUTOMATED RESOLUTION:
+- Script: test-input-devices.ps1
+- Command: Test-KeyboardMouse -DeviceType "USB"
+- Verification: Get-InputDeviceStatus
+
+================================================================================
+SECTION 3: STORAGE DEVICE FAILURES
+================================================================================
+
+SYMPTOMS:
+- "Disk not found" errors
+- Slow read/write speeds
+- Corrupted files or data loss
+- Drive not appearing in system
+- Clicking or grinding noises (HDD)
+
+ROOT CAUSES:
+1. Failing or failed storage device
+2. Loose SATA/power cables
+3. File system corruption
+4. Bad sectors on drive
+5. Overheating storage device
+
+TROUBLESHOOTING STEPS:
+
+Step 1: Check Physical Connections
+- Power off device completely
+- Verify SATA data cable is connected
+- Check power cable to drive
+- Reseat both cables firmly
+- Test with different cables if available
+
+Step 2: Check Drive in BIOS/UEFI
+- Boot into BIOS/UEFI settings
+- Navigate to storage/SATA configuration
+- Verify drive is detected in BIOS
+- Check drive appears in boot order
+- Note drive model and capacity
+
+Step 3: Run Disk Diagnostics
+Windows:
+- Open Command Prompt as Administrator
+- Run: chkdsk C: /f /r (replace C: with drive letter)
+- Allow scan to complete (may take hours)
+- Review scan results for errors
+
+macOS:
+- Open Disk Utility
+- Select drive
+- Click "First Aid"
+- Review repair results
+
+Step 4: Check Drive Health
+- Use manufacturer diagnostic tools:
+  * Seagate: SeaTools
+  * Western Digital: WD Diagnostics
+  * Samsung: Samsung Magician
+- Run full diagnostic scan
+- Review SMART status
+- Check for bad sectors
+
+Step 5: Backup and Replace Drive
+- Backup all important data immediately
+- Use drive cloning software if drive still accessible
+- Replace failing drive with new drive
+- Restore data from backup
+- Verify new drive functions correctly
+
+AUTOMATED RESOLUTION:
+- Script: test-storage-health.ps1
+- Command: Get-DiskHealth -DriveLetter "C"
+- Verification: Test-DiskIntegrity
+
+================================================================================
+SECTION 4: MEMORY (RAM) PROBLEMS
+================================================================================
+
+SYMPTOMS:
+- System crashes or blue screens
+- Random application errors
+- System instability
+- Memory-related error messages
+- Computer won't boot
+
+ROOT CAUSES:
+1. Faulty RAM module
+2. RAM not properly seated
+3. Incompatible RAM modules
+4. Overheating RAM
+5. Memory slot failure
+
+TROUBLESHOOTING STEPS:
+
+Step 1: Run Memory Diagnostic
+Windows:
+- Open Windows Memory Diagnostic
+- Restart and run test
+- Review results after restart
+- Note any errors reported
+
+Third-party tools:
+- MemTest86 (bootable USB)
+- Run extended memory test
+- Let test run for multiple passes
+- Document any errors found
+
+Step 2: Check RAM Installation
+- Power off and unplug device
+- Open case and locate RAM modules
+- Verify RAM is fully seated in slots
+- Check for visible damage
+- Reseat RAM modules firmly
+
+Step 3: Test Individual RAM Modules
+- Remove all but one RAM module
+- Boot system and test
+- If works, add modules one at a time
+- Identify which module causes issues
+- Replace faulty module
+
+Step 4: Verify RAM Compatibility
+- Check motherboard RAM specifications
+- Verify RAM speed matches requirements
+- Ensure RAM type is correct (DDR3/DDR4/DDR5)
+- Check maximum supported capacity
+- Review RAM voltage requirements
+
+Step 5: Check for Overheating
+- Monitor RAM temperature if possible
+- Ensure adequate case ventilation
+- Check RAM heat spreaders are attached
+- Clean dust from RAM and surrounding area
+- Improve case airflow if needed
+
+AUTOMATED RESOLUTION:
+- Script: test-memory.ps1
+- Command: Test-Memory -TestType Extended
+- Verification: Get-MemoryStatus
+
+================================================================================
+SECTION 5: POWER SUPPLY & OVERHEATING ISSUES
+================================================================================
+
+SYMPTOMS:
+- System shuts down unexpectedly
+- Computer won't power on
+- Random reboots
+- Overheating warnings
+- Fan noise or failure
+
+ROOT CAUSES:
+1. Insufficient or failing power supply
+2. Overheating components
+3. Fan failure or blockage
+4. Power supply overload
+5. Thermal paste degradation
+
+TROUBLESHOOTING STEPS:
+
+Step 1: Check Power Supply
+- Verify power supply is adequate wattage
+- Check power supply fan is spinning
+- Listen for unusual noises (grinding, clicking)
+- Test with known good power supply if available
+- Check power supply voltage outputs with multimeter
+
+Step 2: Monitor System Temperatures
+- Use temperature monitoring software:
+  * HWMonitor
+  * Core Temp
+  * SpeedFan
+- Check CPU, GPU, and system temperatures
+- Verify temperatures are within safe ranges
+- Note which components are overheating
+
+Step 3: Check Fan Operation
+- Verify all case fans are spinning
+- Check CPU and GPU fans are working
+- Clean dust from fans and heatsinks
+- Replace non-functioning fans
+- Ensure fans are properly connected
+
+Step 4: Improve Airflow
+- Remove dust from case interior
+- Clean air filters if present
+- Ensure cables are not blocking airflow
+- Verify case has adequate ventilation
+- Consider adding additional case fans
+
+Step 5: Reapply Thermal Paste (CPU/GPU)
+- Remove CPU/GPU heatsink carefully
+- Clean old thermal paste completely
+- Apply new thermal paste (pea-sized amount)
+- Reattach heatsink securely
+- Monitor temperatures after reapplication
+
+AUTOMATED RESOLUTION:
+- Script: monitor-system-health.ps1
+- Command: Get-SystemTemperature -Component "CPU"
+- Verification: Test-PowerSupply -LoadTest
+
+================================================================================
+SECTION 6: MOTHERBOARD & BOOT ISSUES
+================================================================================
+
+SYMPTOMS:
+- Computer won't boot
+- POST (Power-On Self-Test) errors
+- Beep codes on startup
+- System hangs during boot
+- Hardware not detected
+
+ROOT CAUSES:
+1. Motherboard failure
+2. BIOS/UEFI configuration errors
+3. CMOS battery failure
+4. Hardware component failure
+5. Boot device issues
+
+TROUBLESHOOTING STEPS:
+
+Step 1: Check POST and Beep Codes
+- Listen for beep codes during boot
+- Count number and pattern of beeps
+- Refer to motherboard manual for beep code meanings
+- Document beep code pattern
+- Research beep code interpretation
+
+Step 2: Reset BIOS/UEFI Settings
+- Access BIOS/UEFI during boot (usually F2, F10, or Del)
+- Locate "Load Default Settings" or "Reset to Defaults"
+- Save and exit BIOS
+- Test if system boots after reset
+- Reconfigure BIOS settings if needed
+
+Step 3: Check CMOS Battery
+- Locate CMOS battery on motherboard
+- Check battery voltage (should be ~3V)
+- Replace battery if voltage is low
+- Reset BIOS after battery replacement
+- Verify system date/time after replacement
+
+Step 4: Minimal Hardware Test
+- Disconnect all non-essential hardware
+- Boot with only:
+  * CPU
+  * One RAM module
+  * Power supply
+  * Motherboard
+- Add components one at a time
+- Identify which component causes issue
+
+Step 5: Visual Inspection
+- Check motherboard for:
+  * Bulging or leaking capacitors
+  * Burn marks or discoloration
+  * Loose or damaged components
+  * Corrosion or moisture damage
+- Document any visible damage
+- Replace motherboard if damaged
+
+AUTOMATED RESOLUTION:
+- Script: test-motherboard.ps1
+- Command: Test-MotherboardHealth -FullTest
+- Verification: Get-BIOSStatus
+
+================================================================================
+ESCALATION CRITERIA
+================================================================================
+
+Escalate to Hardware Support if:
+- Component replacement required
+- Motherboard failure suspected
+- Data recovery needed from failed drive
+- Warranty claim processing
+- Complex hardware configuration issues
+
+Contact Information:
+- Hardware Support: hardware@company.com
+- Warranty Claims: warranty@company.com
+- On-site Support: Check service portal
+- Emergency: 1-800-HARDWARE
+
+================================================================================
+END OF DOCUMENT
+================================================================================
+

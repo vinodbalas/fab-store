@@ -1,8 +1,9 @@
-import React from "react";
-import { ArrowLeft, FileText, Code, BookOpen, CheckCircle2, ArrowRight, Layers, Database, Brain, Zap, GitBranch, TrendingUp, Users, Globe } from "lucide-react";
+import React, { useState } from "react";
+import { ArrowLeft, FileText, Code, BookOpen, CheckCircle2, ArrowRight, Layers, Database, Brain, Zap, GitBranch, TrendingUp, Users, Globe, Printer, Droplet } from "lucide-react";
 import { fabApps } from "../data/fabApps";
 import { enrichPlatformWithMetrics } from "../data/fabPlatforms";
 import { motion } from "framer-motion";
+import AgenticSupportDemo from "./AgenticSupportDemo";
 
 export default function PlatformDetail({ platform, onBack, onLaunch, readOnly, onRequestLogin }) {
   // Enrich platform with metrics
@@ -11,6 +12,29 @@ export default function PlatformDetail({ platform, onBack, onLaunch, readOnly, o
   
   // Find solutions built on this platform
   const solutions = fabApps.filter((app) => app.platformId === platform.id);
+  
+  // For Agentic Support, show workflows as solutions
+  const isAgenticSupport = platform.id === "agentic-support";
+  const [selectedWorkflow, setSelectedWorkflow] = useState(null);
+  
+  const agenticWorkflows = isAgenticSupport ? [
+    {
+      id: "printer_offline",
+      name: "Printer Offline Workflow",
+      tagline: "Self-healing workflow for offline printer issues",
+      description: "Automatically diagnose network, spooler and heartbeat issues. Attempts self-healing actions and escalates if needed.",
+      icon: Printer,
+      status: "Live",
+    },
+    {
+      id: "ink_error",
+      name: "Ink Cartridge Error Workflow",
+      tagline: "Self-healing workflow for ink cartridge recognition",
+      description: "Validates cartridge authenticity, firmware compatibility and entitlement. Auto-ships replacement if eligible.",
+      icon: Droplet,
+      status: "Live",
+    },
+  ] : [];
 
   return (
     <div className="px-4 md:px-10 pb-16 space-y-8">
@@ -93,69 +117,135 @@ export default function PlatformDetail({ platform, onBack, onLaunch, readOnly, o
       </section>
 
       {/* Existing Solutions Section */}
-      {solutions.length > 0 && (
+      {((isAgenticSupport && agenticWorkflows.length > 0) || solutions.length > 0) && (
         <section className="rounded-[32px] bg-white/95 border border-white/40 shadow-[0_35px_85px_rgba(15,10,45,0.12)] p-8 space-y-6 backdrop-blur">
           <div>
             <div className="flex items-center justify-between mb-2">
               <div>
-                <h2 className="text-2xl font-semibold text-gray-900">Solutions Built on {platform.name}</h2>
+                <h2 className="text-2xl font-semibold text-gray-900">
+                  {isAgenticSupport ? "Workflows Available" : `Solutions Built on ${platform.name}`}
+                </h2>
                 <p className="text-gray-600 mt-1">
-                  {solutions.length} {solutions.length === 1 ? 'solution' : 'solutions'} leveraging {platform.name} capabilities
+                  {isAgenticSupport 
+                    ? `${agenticWorkflows.length} self-healing workflows leveraging ${platform.name} capabilities`
+                    : `${solutions.length} ${solutions.length === 1 ? 'solution' : 'solutions'} leveraging ${platform.name} capabilities`
+                  }
                 </p>
               </div>
               <div className="px-4 py-2 rounded-full bg-[#612D91]/10 text-[#612D91] text-sm font-semibold">
-                {metrics.solutionCount} Total
+                {isAgenticSupport ? agenticWorkflows.length : metrics.solutionCount} Total
               </div>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            {solutions.map((app) => (
-              <div key={app.id} className="relative rounded-[28px] border border-white/40 bg-white/95 shadow-[0_20px_50px_rgba(18,12,64,0.15)] flex flex-col overflow-hidden">
-                <div className={`h-1.5 w-full bg-gradient-to-r ${app.accent}`} />
-                <div className="absolute top-2 right-2 px-2 py-1 rounded-full bg-[#612D91]/10 text-[#612D91] text-[10px] font-semibold z-10">
-                  Built on {platform.name}
-                </div>
-                <div className="p-6 flex flex-col gap-4">
-                  <div className="flex items-center flex-wrap gap-2 text-xs uppercase tracking-wide text-gray-500">
-                    <span className={app.categoryColor}>{app.category}</span>
-                    <span className={`px-2 py-0.5 rounded-full ${app.statusColor || "bg-gray-100 text-gray-700"}`}>{app.status}</span>
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900">{app.name}</h3>
-                    <p className="text-sm text-gray-600 font-medium">{app.tagline}</p>
-                  </div>
-                  <p className="text-sm text-gray-600 flex-1">{app.description}</p>
-                  <div className="flex flex-wrap gap-3 text-[11px] text-gray-600">
-                    <div className="rounded-2xl border border-gray-200/80 px-3 py-1.5">
-                      <p className="uppercase tracking-wide text-gray-500 font-semibold">Industry</p>
-                      <p className="font-semibold text-gray-900">{app.industry}</p>
+            {isAgenticSupport ? (
+              agenticWorkflows.map((workflow) => {
+                const Icon = workflow.icon;
+                return (
+                  <div 
+                    key={workflow.id} 
+                    className="relative rounded-[28px] border border-white/40 bg-white/95 shadow-[0_20px_50px_rgba(18,12,64,0.15)] flex flex-col overflow-hidden cursor-pointer hover:shadow-[0_25px_60px_rgba(18,12,64,0.2)] transition-shadow"
+                    onClick={() => setSelectedWorkflow(workflow.id)}
+                  >
+                    <div className="h-1.5 w-full bg-gradient-to-r from-[#612D91] to-[#A64AC9]" />
+                    <div className="absolute top-2 right-2 px-2 py-1 rounded-full bg-[#612D91]/10 text-[#612D91] text-[10px] font-semibold z-10">
+                      {workflow.status}
                     </div>
-                    <div className="rounded-2xl border border-gray-200/80 px-3 py-1.5">
-                      <p className="uppercase tracking-wide text-gray-500 font-semibold">Vertical</p>
-                      <p className="font-semibold text-gray-900">{app.vertical ?? app.category}</p>
+                    <div className="p-6 flex flex-col gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#612D91] to-[#A64AC9] flex items-center justify-center">
+                          <Icon className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-xl font-semibold text-gray-900">{workflow.name}</h3>
+                          <p className="text-sm text-gray-600 font-medium">{workflow.tagline}</p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600 flex-1">{workflow.description}</p>
+                      <button
+                        className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#612D91] to-[#A64AC9] text-white font-semibold text-sm hover:shadow-lg transition-all"
+                      >
+                        Try Workflow
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-                  {!readOnly && (
-                    <button
-                      onClick={() => onLaunch?.(app.launchKey || app.id)}
-                      className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#612D91] to-[#A64AC9] text-white font-semibold text-sm hover:shadow-lg transition-all"
-                    >
-                      {app.ctaLabel || "Launch"}
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  )}
-                  {readOnly && (
-                    <button
-                      onClick={onRequestLogin}
-                      className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-semibold text-sm hover:bg-gray-200 transition-all"
-                    >
-                      Sign in to launch
-                    </button>
-                  )}
+                );
+              })
+            ) : (
+              solutions.map((app) => (
+                <div key={app.id} className="relative rounded-[28px] border border-white/40 bg-white/95 shadow-[0_20px_50px_rgba(18,12,64,0.15)] flex flex-col overflow-hidden">
+                  <div className={`h-1.5 w-full bg-gradient-to-r ${app.accent}`} />
+                  <div className="absolute top-2 right-2 px-2 py-1 rounded-full bg-[#612D91]/10 text-[#612D91] text-[10px] font-semibold z-10">
+                    Built on {platform.name}
+                  </div>
+                  <div className="p-6 flex flex-col gap-4">
+                    <div className="flex items-center flex-wrap gap-2 text-xs uppercase tracking-wide text-gray-500">
+                      <span className={app.categoryColor}>{app.category}</span>
+                      <span className={`px-2 py-0.5 rounded-full ${app.statusColor || "bg-gray-100 text-gray-700"}`}>{app.status}</span>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-900">{app.name}</h3>
+                      <p className="text-sm text-gray-600 font-medium">{app.tagline}</p>
+                    </div>
+                    <p className="text-sm text-gray-600 flex-1">{app.description}</p>
+                    <div className="flex flex-wrap gap-3 text-[11px] text-gray-600">
+                      <div className="rounded-2xl border border-gray-200/80 px-3 py-1.5">
+                        <p className="uppercase tracking-wide text-gray-500 font-semibold">Industry</p>
+                        <p className="font-semibold text-gray-900">{app.industry}</p>
+                      </div>
+                      <div className="rounded-2xl border border-gray-200/80 px-3 py-1.5">
+                        <p className="uppercase tracking-wide text-gray-500 font-semibold">Vertical</p>
+                        <p className="font-semibold text-gray-900">{app.vertical ?? app.category}</p>
+                      </div>
+                    </div>
+                    {!readOnly && (
+                      <button
+                        onClick={() => onLaunch?.(app.launchKey || app.id)}
+                        className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#612D91] to-[#A64AC9] text-white font-semibold text-sm hover:shadow-lg transition-all"
+                      >
+                        {app.ctaLabel || "Launch"}
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    )}
+                    {readOnly && (
+                      <button
+                        onClick={onRequestLogin}
+                        className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-semibold text-sm hover:bg-gray-200 transition-all"
+                      >
+                        Sign in to launch
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
+        </section>
+      )}
+
+      {/* Agentic Support Demo Section */}
+      {isAgenticSupport && selectedWorkflow && (
+        <section className="rounded-[32px] bg-white/95 border border-white/40 shadow-[0_35px_85px_rgba(15,10,45,0.12)] p-8 space-y-6 backdrop-blur">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-2xl font-semibold text-gray-900">Workflow Demo</h2>
+              <p className="text-gray-600 mt-1">
+                Interactive demo for {agenticWorkflows.find(w => w.id === selectedWorkflow)?.name}
+              </p>
+            </div>
+            <button
+              onClick={() => setSelectedWorkflow(null)}
+              className="px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
+            >
+              Close Demo
+            </button>
+          </div>
+          <AgenticSupportDemo 
+            onBack={() => setSelectedWorkflow(null)} 
+            embedded={true}
+            initialWorkflow={selectedWorkflow}
+          />
         </section>
       )}
 
