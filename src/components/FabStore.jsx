@@ -139,21 +139,24 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
     });
   }, [platformCategory, platformIndustry, search]);
 
-  // Combine original apps with cloned templates
+  // Combine original apps with any cloned templates (used for hero/spotlight, My Space, etc.)
   const allApps = useMemo(() => {
     return [...fabApps, ...clonedTemplates];
   }, [clonedTemplates]);
 
   const filteredApps = useMemo(() => {
     const query = search.toLowerCase();
-    const base = allApps.filter((app) => {
+    // Only show first-class solutions in the catalogue.
+    // Hide any cloned/copied templates (internal helper apps).
+    const base = fabApps.filter((app) => {
       const matchesIndustry = industry === "All" || app.industry === industry;
       const matchesQuery =
         !query ||
         app.name.toLowerCase().includes(query) ||
         app.description.toLowerCase().includes(query) ||
         app.tags?.some((tag) => tag.toLowerCase().includes(query));
-      return matchesIndustry && matchesQuery;
+      const isCopy = typeof app.name === "string" && app.name.toLowerCase().includes("(copy)");
+      return matchesIndustry && matchesQuery && !isCopy;
     });
     return base.sort((a, b) => {
       if (sort === "name") return a.name.localeCompare(b.name);
@@ -162,7 +165,7 @@ function FabStore({ onLaunch, readOnly = false, onRequestLogin, onNavigate }) {
       if (pa !== pb) return pa - pb;
       return a.name.localeCompare(b.name);
     });
-  }, [industry, search, sort, allApps]);
+  }, [industry, search, sort]);
 
   const filteredModals = useMemo(() => {
     return fabModels.filter((model) => {

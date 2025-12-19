@@ -5,6 +5,7 @@ import {
   Users, CheckCircle2, AlertCircle, Bot, TrendingDown, Sparkles,
   Target, Award, ArrowRight, Brain, Shield, Timer, Wrench
 } from "lucide-react";
+import TicketsTable from "./TicketsTable";
 
 const MOCK_STATS = {
   totalIncidents: 1250,
@@ -225,135 +226,25 @@ export default function AgenticSupportWatchtower({ onNavigate }) {
         </div>
       </motion.div>
 
-      {/* Value Metrics - Business Impact */}
-      <div>
-        <div className="flex items-center gap-2 mb-4">
-          <Award className="w-5 h-5 text-[#612D91]" />
-          <h2 className="text-xl font-bold text-gray-900">Business Impact</h2>
-          <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">Real ROI</span>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {VALUE_METRICS.map((metric, idx) => (
-            <ValueMetricCard key={idx} metric={metric} index={idx} />
-          ))}
-        </div>
-      </div>
-
-      {/* How It Works - Visual Journey */}
-      <div className="rounded-3xl bg-white border border-gray-200 shadow-lg p-8">
-        <div className="flex items-center gap-2 mb-6">
-          <Brain className="w-6 h-6 text-[#612D91]" />
-          <h2 className="text-xl font-bold text-gray-900">How Agentic Workflows Transform Support</h2>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <WorkflowStep
-            number="1"
-            icon={<Users className="w-5 h-5" />}
-            title="Customer Reports Issue"
-            description="Voice, chat, or automated detection captures the problem in real-time"
-            color="from-blue-500 to-blue-600"
-          />
-          <WorkflowStep
-            number="2"
-            icon={<Brain className="w-5 h-5" />}
-            title="AI Analyzes & Routes"
-            description="Multi-agent system identifies issue type and selects optimal workflow"
-            color="from-purple-500 to-purple-600"
-          />
-          <WorkflowStep
-            number="3"
-            icon={<Wrench className="w-5 h-5" />}
-            title="Self-Healing Execution"
-            description="Automated agents execute diagnostic and resolution steps autonomously"
-            color="from-indigo-500 to-indigo-600"
-          />
-          <WorkflowStep
-            number="4"
-            icon={<CheckCircle2 className="w-5 h-5" />}
-            title="Instant Resolution"
-            description="Issue resolved in seconds with full audit trail and customer notification"
-            color="from-green-500 to-green-600"
-          />
-        </div>
-      </div>
-
-      {/* Performance Analytics */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Before vs After */}
-        <div className="lg:col-span-2">
-          <div className="rounded-3xl bg-white border border-gray-200 shadow-lg p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <Target className="w-5 h-5 text-[#612D91]" />
-              <h2 className="text-lg font-bold text-gray-900">Before vs After Agentic Workflows</h2>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Before */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-500" />
-                  <h3 className="font-semibold text-gray-900">Traditional Support</h3>
-                </div>
-                <ComparisonMetric 
-                  label="Avg Resolution Time"
-                  value="18 minutes"
-                  trend="negative"
-                />
-                <ComparisonMetric 
-                  label="Monthly Support Costs"
-                  value="$250K"
-                  trend="negative"
-                />
-                <ComparisonMetric 
-                  label="Agent Utilization"
-                  value="42%"
-                  trend="negative"
-                />
-                <ComparisonMetric 
-                  label="Customer Satisfaction"
-                  value="78%"
-                  trend="negative"
-                />
-              </div>
-
-              {/* After */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-green-500" />
-                  <h3 className="font-semibold text-gray-900">With Agentic AI</h3>
-                </div>
-                <ComparisonMetric 
-                  label="Avg Resolution Time"
-                  value="45 seconds"
-                  trend="positive"
-                  improvement="-96%"
-                />
-                <ComparisonMetric 
-                  label="Monthly Support Costs"
-                  value="$123K"
-                  trend="positive"
-                  improvement="-51%"
-                />
-                <ComparisonMetric 
-                  label="Agent Utilization"
-                  value="89%"
-                  trend="positive"
-                  improvement="+112%"
-                />
-                <ComparisonMetric 
-                  label="Customer Satisfaction"
-                  value="94%"
-                  trend="positive"
-                  improvement="+21%"
-                />
-              </div>
-            </div>
+      {/* Tickets Worklist full-width, Live Activity below */}
+      <div className="space-y-6 mt-6">
+        {/* Tickets - full width table */}
+        <div className="rounded-3xl bg-white border border-gray-200 shadow-lg p-6 flex flex-col">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="w-5 h-5 text-[#612D91]" />
+            <h2 className="text-lg font-bold text-gray-900">Generated Tickets</h2>
+          </div>
+          
+          <div className="flex-1 min-h-0">
+            <TicketsTable onSelect={(ticket) => {
+              // Handle ticket selection if needed
+              console.log("Selected ticket:", ticket);
+            }} />
           </div>
         </div>
 
-        {/* Live Activity Feed */}
-        <div className="rounded-3xl bg-white border border-gray-200 shadow-lg p-6">
+        {/* Live Activity - full width */}
+        <div className="rounded-3xl bg-white border border-gray-200 shadow-lg p-6 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Activity className="w-5 h-5 text-[#612D91]" />
@@ -365,7 +256,7 @@ export default function AgenticSupportWatchtower({ onNavigate }) {
             </div>
           </div>
           
-          <div className="space-y-3 max-h-[400px] overflow-y-auto">
+          <div className="space-y-3 flex-1 min-h-0 overflow-y-auto">
             {MOCK_RECENT.map((run, idx) => (
               <motion.div
                 key={run.id}
@@ -403,34 +294,7 @@ export default function AgenticSupportWatchtower({ onNavigate }) {
             ))}
           </div>
         </div>
-      </div>
 
-      {/* Workflow Performance Details */}
-      <div className="rounded-3xl bg-white border border-gray-200 shadow-lg p-8">
-        <div className="flex items-center gap-2 mb-6">
-          <BarChart3 className="w-6 h-6 text-[#612D91]" />
-          <h2 className="text-xl font-bold text-gray-900">Top Performing Workflows</h2>
-          <span className="text-xs text-gray-500">Last 30 days</span>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <EnhancedWorkflowCard
-            name="Printer Offline"
-            total={780}
-            selfHealed={540}
-            escalated={180}
-            failed={60}
-            icon={<Wrench className="w-5 h-5" />}
-          />
-          <EnhancedWorkflowCard
-            name="Ink Cartridge Error"
-            total={470}
-            selfHealed={340}
-            escalated={110}
-            failed={20}
-            icon={<Shield className="w-5 h-5" />}
-          />
-        </div>
       </div>
     </div>
   );

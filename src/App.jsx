@@ -35,7 +35,9 @@ import ArchitecturePage from "./components/ArchitecturePage";
 import AgenticSupportLayout from "./apps/agentic-support/components/Layout";
 import AgenticSupportConsole from "./apps/agentic-support/components/Console";
 import AgenticSupportWatchtower from "./apps/agentic-support/components/Watchtower";
+import AgenticSupportExecutiveDashboard from "./apps/agentic-support/components/ExecutiveDashboard";
 import AgenticSupportKnowledgeBase from "./apps/agentic-support/components/KnowledgeBase";
+import AgenticSupportAdmin from "./apps/agentic-support/components/Admin";
 
 const SHOW_LEGACY_LOGIN = false;
 
@@ -130,7 +132,9 @@ function AppContent() {
     if (currentPage === "inventory/list") return "inventory-list";
     if (currentPage === "agentic") return "agentic";
     if (currentPage === "agentic/watchtower") return "agentic/watchtower";
+    if (currentPage === "agentic/executive") return "agentic/executive";
     if (currentPage === "agentic/knowledge-base") return "agentic/knowledge-base";
+    if (currentPage === "agentic/admin") return "agentic/admin";
     return "home"; // Default to home
   };
 
@@ -301,8 +305,8 @@ function AppContent() {
     );
   }
 
-  // Agentic Support shell: console + watchtower + knowledge base
-  if (view === "agentic" || view === "agentic/watchtower" || view === "agentic/knowledge-base") {
+  // Agentic Support shell: console + watchtower + executive + knowledge base + admin
+  if (view === "agentic" || view === "agentic/watchtower" || view === "agentic/executive" || view === "agentic/knowledge-base" || view === "agentic/admin") {
     return (
       <AgenticSupportLayout onNavigate={handleNavigate} active={currentPage}>
         <AnimatePresence mode="wait">
@@ -325,6 +329,27 @@ function AppContent() {
               transition={{ duration: 0.4 }}
             >
               <AgenticSupportKnowledgeBase onNavigate={handleNavigate} />
+            </motion.div>
+          ) : view === "agentic/executive" ? (
+            <motion.div
+              key="agentic-executive"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.4 }}
+            >
+              <AgenticSupportExecutiveDashboard onNavigate={handleNavigate} />
+            </motion.div>
+          ) : view === "agentic/admin" ? (
+            <motion.div
+              key="agentic-admin"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.4 }}
+              className="h-full"
+            >
+              <AgenticSupportAdmin onNavigate={handleNavigate} />
             </motion.div>
           ) : (
             <motion.div

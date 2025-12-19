@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, LogOut, Moon, Sun } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
-import { useDemoMode } from "../contexts/DemoModeContext";
 import Sidebar from "./Sidebar";
 import RoleSwitcher from "./RoleSwitcher";
 
@@ -30,7 +29,6 @@ export default function SolutionLayout({
   extraHeaderRight = null,
 }) {
   const { user, logout } = usePageAuth();
-  const { isDemoMode } = useDemoMode();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useDarkMode(`${storageKey}.darkMode`);
   const menuRef = useRef(null);
@@ -57,23 +55,16 @@ export default function SolutionLayout({
           <div className="w-10 h-10 rounded-2xl bg-white/12 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-lg">
             <img src={TP_LOGO} alt="Teleperformance" className="w-7 h-7 object-contain" />
           </div>
-          <div className="leading-tight">
-            <div className="flex items-baseline gap-3">
-              <h1 className="text-[22px] sm:text-[26px] font-extrabold tracking-tight">
-                {productName}
-              </h1>
-              {tagline && (
-                <span className="text-[10px] sm:text-[11px] uppercase tracking-[0.35em] font-semibold text-white/80 hidden md:block">
-                  {tagline}
-                </span>
-              )}
-            </div>
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-[22px] sm:text-[26px] font-extrabold tracking-tight">
+              {productName}
+            </h1>
+            {tagline && (
+              <span className="text-[11px] sm:text-[12px] uppercase tracking-[0.2em] font-semibold text-white/85 hidden md:inline-block">
+                {tagline}
+              </span>
+            )}
           </div>
-          {isDemoMode && (
-            <span className="text-[10px] uppercase ml-2 px-2 py-0.5 rounded-full bg-white/18">
-              Demo mode
-            </span>
-          )}
         </div>
 
         <div className="flex items-center gap-3">

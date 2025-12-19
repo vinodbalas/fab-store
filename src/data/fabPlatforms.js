@@ -2,7 +2,7 @@ import { fabApps } from "./fabApps";
 
 // Calculate platform metrics dynamically
 export function enrichPlatformWithMetrics(platform) {
-  // Special handling for Agentic Support - it has 2 workflows, not traditional solutions
+  // Special handling for TP FAB Agents - it has 2 workflows, not traditional solutions
   if (platform.id === "agentic-support") {
     return {
       ...platform,
@@ -374,27 +374,27 @@ const createFieldServiceAgents = (dataProvider) => {
   },
   {
     id: "agentic-support",
-    name: "Agentic Support Orchestration",
-    tagline: "Self-healing workflows for device & customer support",
+    name: "TP FAB Agents Platform",
+    tagline: "AI-powered self-healing workflows for device & customer support",
     category: "Platform",
     industry: "Cross-Industry",
     status: "Live",
     description:
-      "A backend platform for building modular, agentic workflows that diagnose, self-heal, verify, and escalate customer support issues. Designed for printer and device support today, extensible to broader CX scenarios.",
+      "A backend platform for building modular AI agent workflows that diagnose, self-heal, verify, and escalate customer support issues. Designed for printer and device support today, extensible to broader CX scenarios.",
     highlights: [
       "Printer offline & ink error self-heal workflows",
-      "Modular agents for diagnosis, action, verification, escalation",
+      "Modular AI agents for diagnosis, action, verification, escalation",
       "Structured logging for observability & AI Watchtower",
       "FastAPI microservice, easy to plug into CCaaS / CRM",
     ],
-    tags: ["Platform", "Cross-Industry", "Live", "Agentic", "Support"],
+    tags: ["Platform", "Cross-Industry", "Live", "AI Agents", "Support"],
     accent: "from-[#4C1D95] to-[#7C3AED]",
     statusColor: "bg-emerald-100 text-emerald-700",
     categoryColor: "text-purple-500",
-    stack: ["FastAPI", "Python", "Agentic Engine", "State Machine"],
+    stack: ["FastAPI", "Python", "AI Console Core", "State Machine"],
     documentation: {
       overview:
-        "Agentic Support Orchestration is a FastAPI-based microservice that runs end-to-end self-healing workflows. It separates intent detection, diagnostics, action execution, verification, and escalation into reusable agents orchestrated as a state machine.",
+        "TP FAB Agents Platform is a FastAPI-based microservice that runs end-to-end self-healing workflows. It separates intent detection, diagnostics, action execution, verification, and escalation into reusable AI agents orchestrated as a state machine.",
       features: [
         "Trigger workflows via clean HTTP APIs",
         "Agent-per-stage design for diagnosics, actions, verification, escalation",

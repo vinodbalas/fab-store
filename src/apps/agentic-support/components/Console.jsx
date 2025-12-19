@@ -27,7 +27,12 @@ import { motion } from "framer-motion";
 import AgenticSupportDemo from "../../../components/AgenticSupportDemo";
 import { searchKnowledgeBase, getCategoryForWorkflow } from "../services/knowledgeBase";
 import { createTicket, getAvailableTicketingSystems, getTicketingConfig } from "../services/ticketingService";
+import { saveTicket } from "../services/ticketsService";
 import KnowledgeDocViewer from "./KnowledgeDocViewer";
+import CCASConnectionPanel from "./CCASConnectionPanel";
+import WebhookEventLog from "./WebhookEventLog";
+import CCASConfigPanel from "./CCASConfigPanel";
+import LiveDemoController from "./LiveDemoController";
 
 const INTENT_CATALOG = [
   {
@@ -115,50 +120,6 @@ function AvatarCircle({ icon, active, pulse = false }) {
   );
 }
 
-function StepChip({ label, step, status, icon }) {
-  const isActive = status !== "waiting";
-  const isRunning = status === "running";
-  const isDone = status === "done";
-  const isEscalated = status === "escalated";
-
-  let bgColor = "bg-gray-100";
-  let textColor = "text-gray-500";
-  let ringColor = "ring-gray-300";
-  let pulseClass = "";
-
-  if (isRunning) {
-    bgColor = "bg-amber-100";
-    textColor = "text-amber-700";
-    ringColor = "ring-amber-300";
-    pulseClass = "animate-pulse";
-  } else if (isDone) {
-    bgColor = "bg-[#F5F3FF]";
-    textColor = "text-[#612D91]";
-    ringColor = "ring-[#612D91]/40";
-  } else if (isEscalated) {
-    bgColor = "bg-red-100";
-    textColor = "text-red-700";
-    ringColor = "ring-red-300";
-  }
-
-  return (
-    <motion.div
-      className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[12px] font-semibold ring-1 ${ringColor} ${bgColor} ${textColor} ${pulseClass}`}
-      initial={{ opacity: 0, x: -10 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.3, delay: step * 0.1 }}
-    >
-      <span className="w-4 h-4 flex items-center justify-center rounded-full bg-white text-gray-700">
-        {icon ? icon : step}
-      </span>
-      <span className="flex items-center gap-1">
-        {icon && <span className="sr-only">{`Step ${step}`}</span>}
-        <span>{label}</span>
-      </span>
-    </motion.div>
-  );
-}
-
 export default function AgenticSupportConsole({ onNavigate }) {
   const [interactionText, setInteractionText] = useState("");
   const [isListening, setIsListening] = useState(false);
@@ -183,6 +144,17 @@ export default function AgenticSupportConsole({ onNavigate }) {
   // Document viewer state
   const [showDocViewer, setShowDocViewer] = useState(false);
   const [docViewerPage, setDocViewerPage] = useState(1);
+  
+  // CCAS Infrastructure state
+  const [showCCASInfra, setShowCCASInfra] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
+  
+  // Track if demo/interaction is active
+  useEffect(() => {
+    if (stage !== 'idle') {
+      setIsPlaying(true);
+    }
+  }, [stage]);
 
   // Email-specific state
   const [emailFrom, setEmailFrom] = useState("");
@@ -289,6 +261,26 @@ export default function AgenticSupportConsole({ onNavigate }) {
           const ticketResult = await createTicket(ticketData, selectedTicketingSystem);
           setTicketResult(ticketResult);
           setTicketConfirmed(true);
+          
+          // Save ticket to storage for Watchtower
+          const ticketToSave = {
+            id: ticketResult.ticketId || `TKT-${Date.now()}`,
+            ticketId: ticketResult.ticketId,
+            ticketUrl: ticketResult.url,
+            ticketSystem: ticketResult.system,
+            workflow: "unknown",
+            category: "Unknown Category",
+            interactionText: interactionText,
+            detectedDevice: detectedDevice,
+            status: "escalated",
+            diagnosis: null,
+            actions: [],
+            escalationReason: "No confident playbook match",
+            knowledgeBase: null,
+            createdAt: ticketResult.createdAt || new Date().toISOString(),
+            timestamp: new Date().toISOString(),
+          };
+          saveTicket(ticketToSave);
           
           // Update unknown result with ticket info
           unknownResult.escalation = {
@@ -449,28 +441,28 @@ export default function AgenticSupportConsole({ onNavigate }) {
     // Debounce: Wait for user to pause (stop typing/speaking)
     // This gives them time to complete their thought
     debounceTimer = setTimeout(() => {
-      // After pause, show background processing before intent detection
+      // After pause, show customer input capture (longer for demo explanation)
       t1 = setTimeout(() => {
         setStage("intent-detecting");
-      }, 1200); // Show brief background work before intent detection
+      }, 2500); // Customer input visible for 2.5s - time to explain what was captured
 
       t2 = setTimeout(() => {
         setStage("intent-ready");
-      }, 2400); // Intent detected and ready
+      }, 5000); // Intent Brain analyzing - 2.5s to explain AI reasoning
 
       t3 = setTimeout(() => {
         setStage("knowledge-ready");
-      }, 3600); // Show knowledge source
+      }, 7000); // Knowledge matched - 2s to explain knowledge base lookup
 
       t4 = setTimeout(() => {
         setStage("telemetry");
-      }, 4800); // Gather telemetry
+      }, 9500); // Telemetry gathering - 2.5s to explain device snapshot
 
       const t5 = setTimeout(() => {
         // Continue workflow for all cases - don't pause on unknown
         setStage("running");
         setAutoRunToken(String(Date.now()));
-      }, 6800); // Execute workflow
+      }, 12000); // Execute workflow - 2.5s to explain actions
     }, 1000); // Wait 1 second after user stops typing/speaking
 
     return () => {
@@ -481,30 +473,6 @@ export default function AgenticSupportConsole({ onNavigate }) {
       clearTimeout(t4);
     };
   }, [interactionText, selectedWorkflow]);
-
-  const progressPercent = useMemo(() => {
-    switch (stage) {
-      case "idle":
-        return 0;
-      case "capture":
-        return 12;
-      case "intent-detecting":
-        return 28;
-      case "intent-ready":
-        return 45;
-      case "knowledge-ready":
-        return 60;
-      case "telemetry":
-        return 75;
-      case "running":
-        return 90;
-      case "completed":
-      case "escalated":
-        return 100;
-      default:
-        return 0;
-    }
-  }, [stage]);
 
   const currentOutcome = useMemo(() => {
     if (!lastResult) return null;
@@ -720,197 +688,227 @@ export default function AgenticSupportConsole({ onNavigate }) {
     }
   }, [stage]);
 
+  // Handle demo interactions from LiveDemoController
+  const handleDemoInteraction = (interaction) => {
+    // Update channel
+    if (interaction.channel === 'voice') {
+      setChannel('voice');
+    } else if (interaction.channel === 'sms' || interaction.channel === 'whatsapp' || interaction.channel === 'chat') {
+      setChannel('chat');
+    }
+    
+    // Update interaction text
+    setInteractionText(interaction.text);
+    
+    // Update chat messages if not voice
+    if (interaction.channel !== 'voice') {
+      setChatMessages([
+        {
+          id: Date.now(),
+          sender: 'user',
+          text: interaction.text,
+          timestamp: new Date().toISOString(),
+          from: interaction.from,
+          customerName: interaction.customerName
+        }
+      ]);
+    }
+  };
+
   return (
-    <div className="space-y-3 p-3">
-      {/* Compact header in AI Watchtower style */}
-      <div className="flex items-center justify-between mb-1">
+    <div className="flex flex-col h-screen bg-gradient-to-br from-gray-50 via-purple-50/30 to-blue-50/30">
+      {/* Minimal Top Bar with Gradient */}
+      <div className="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-[#612D91] via-[#7B3FE4] to-[#A64AC9] shadow-md">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#612D91] via-[#7B3FE4] to-[#C26BFF] flex items-center justify-center shadow-md">
-            <HeadsetIcon />
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center">
+              <HeadsetIcon />
+            </div>
+            <span className="font-bold text-white">AI Console</span>
           </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">AI Console</h1>
-            <p className="text-xs sm:text-sm text-gray-500">
-              Capture customer voice or chat, route to the right workflow, and run end-to-end self-healing with full traceability.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-medium border border-emerald-100">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            Live
-          </span>
+          <div className="h-4 w-px bg-white/30" />
+          <button
+            onClick={() => setShowCCASInfra(!showCCASInfra)}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
+              showCCASInfra
+                ? 'bg-white text-[#612D91] shadow-md'
+                : 'bg-white/20 text-white hover:bg-white/30'
+            }`}
+          >
+            {showCCASInfra ? '🔷 CCAS' : 'CCAS'}
+          </button>
           {onNavigate && (
             <button
               onClick={() => onNavigate("store")}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-gray-700 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 shadow-sm"
-              title="Back to FAB Store"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-white/90 hover:text-white hover:bg-white/20 rounded-md transition-colors"
             >
               <Store className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Store</span>
+              Store
             </button>
           )}
         </div>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-400 text-white text-[10px] font-bold shadow-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+            LIVE
+          </span>
+        </div>
       </div>
 
-      {/* Agentic storyboard – single cohesive canvas */}
-      <div className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 space-y-4">
-        {/* Live agentic run strip, now embedded inside the storyboard card */}
-        <div className="space-y-2.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs text-gray-600">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
-              </span>
-              <span className="font-semibold text-gray-800 flex items-center gap-1 text-sm">
-                <Brain className="w-4 h-4 text-[#612D91]" />
-                Live agentic run
-              </span>
+      {/* Main Content */}
+      <div className="flex-1 space-y-4 p-4 overflow-y-auto min-h-0">
+      {/* CCAS Infrastructure Section - Integrations */}
+      {showCCASInfra && (
+        <div className="bg-gradient-to-br from-gray-50 via-slate-50 to-gray-50 rounded-xl p-3.5 border-2 border-gray-300 shadow-md">
+          <div className="flex items-center gap-2 mb-2.5 pb-2 border-b border-gray-300">
+            <div className="w-7 h-7 bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg flex items-center justify-center shadow-sm">
+              <Zap className="w-4 h-4 text-white" />
             </div>
-            <p className="hidden md:block text-[11px] text-gray-500">
-              {stage === "capture" && "Capturing customer issue…"}
-              {["intent-detecting", "intent-ready"].includes(stage) && "Figuring out the best workflow…"}
-              {stage === "telemetry" && "Snapshotting device and account telemetry…"}
-              {["running"].includes(stage) && "Running self-heal actions…"}
-              {["completed", "escalated"].includes(stage) && "Run finished – see outcome below."}
-            </p>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900">CCAS Integration Layer</h3>
+              <p className="text-[10px] text-gray-600 font-semibold">External Contact Center Infrastructure</p>
+            </div>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-            <div
-              className="h-2 rounded-full bg-gradient-to-r from-[#612D91] via-[#A64AC9] to-[#10B981] transition-all duration-500"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2 text-[11px] md:text-sm text-gray-700">
-            <StepChip
-              label={
-                channel === "voice" ? "Hear customer" :
-                channel === "chat" ? "Chat with customer" :
-                channel === "email" ? "Read email" :
-                "Capture input"
-              }
-              step={1}
-              status={stage === "idle" ? "waiting" : stage === "capture" ? "running" : "done"}
-              icon={
-                channel === "voice" ? <Mic className="w-3 h-3" /> :
-                channel === "chat" ? <MessageCircle className="w-3 h-3" /> :
-                channel === "email" ? <Mail className="w-3 h-3" /> :
-                <User className="w-3 h-3" />
-              }
-            />
-            <StepChip
-              label="Figure out intent"
-              step={2}
-              status={
-                ["intent-detecting"].includes(stage)
-                  ? "running"
-                  : ["intent-ready", "knowledge-ready", "telemetry", "running", "completed", "escalated"].includes(stage)
-                  ? "done"
-                  : "waiting"
-              }
-              icon={<Brain className="w-3 h-3" />}
-            />
-            <StepChip
-              label="Snapshot device"
-              step={3}
-              status={
-                ["telemetry"].includes(stage)
-                  ? "running"
-                  : ["running", "completed", "escalated"].includes(stage)
-                  ? "done"
-                  : "waiting"
-              }
-              icon={<Cpu className="w-3 h-3" />}
-            />
-            <StepChip
-              label="Self-heal / escalate"
-              step={4}
-              status={
-                ["running"].includes(stage)
-                  ? "running"
-                  : ["completed", "escalated"].includes(stage)
-                  ? "done"
-                  : "waiting"
-              }
-              icon={<Zap className="w-3 h-3" />}
-            />
+          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+            {/* Live Interaction Monitor */}
+            <div className="h-[320px]">
+              <LiveDemoController onInteractionCapture={handleDemoInteraction} />
+            </div>
+            
+            {/* CCAS Connection Status */}
+            <div className="h-[320px]">
+              <CCASConnectionPanel provider="freeswitch" />
+            </div>
           </div>
         </div>
+      )}
 
-        {/* Top row: Customer / Intent / Telemetry */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+
+      {/* TP Console Core - Our Product/IP */}
+      <div className="relative bg-gradient-to-br from-purple-50/50 via-indigo-50/30 to-purple-50/50 rounded-xl p-4 border-2 border-purple-400 shadow-lg">
+        {/* Elegant Minimal Header */}
+        <div className="flex items-center justify-between mb-3 pb-2 border-b border-purple-200">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 bg-gradient-to-br from-[#612D91] to-[#8B5CF6] rounded-md flex items-center justify-center shadow-sm">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-gray-900">TP Console Core</h3>
+              <p className="text-[10px] text-gray-600 font-semibold">Real-time AI Support Intelligence</p>
+            </div>
+          </div>
+          <div className="px-2 py-0.5 bg-purple-600/90 text-white text-[9px] font-bold rounded shadow-sm">
+            PROPRIETARY
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Column 1: Customer – subtle indigo */}
           <motion.div
             animate={{
-              scale: stage !== "idle" ? 1.03 : 1,
               boxShadow:
                 stage === "capture"
-                  ? "0 22px 55px rgba(128,149,228,0.55)"
-                  : "0 6px 18px rgba(15,23,42,0.12)",
+                  ? "0 12px 30px rgba(128,149,228,0.35)"
+                  : "0 2px 8px rgba(15,23,42,0.08)",
             }}
-            transition={{ duration: 0.35 }}
-            className={`relative rounded-lg border-2 px-4 py-4 flex flex-col gap-3 transition-all duration-300 min-h-[420px] ${
+            transition={{ duration: 0.3 }}
+            className={`relative rounded-lg border-2 px-4 py-4 flex flex-col gap-3 transition-all duration-300 h-[300px] ${
               stage === "capture"
-                ? "border-indigo-300 bg-indigo-50 shadow-md"
+                ? "border-indigo-400 bg-indigo-50 shadow-lg"
                 : "border-gray-200 bg-white"
             }`}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <AvatarCircle active={stage !== "idle"} pulse={stage === "capture"} icon={<User className="w-4 h-4" />} />
-                <p className="text-base font-semibold text-gray-900">Customer</p>
+                <p className="text-base font-bold text-gray-900">Customer Input</p>
               </div>
-              {channel === "voice" && (
-                <button
-                  type="button"
-                  onClick={handleStartVoice}
-                  disabled={!hasSpeechSupport || isListening}
-                  aria-label={
-                    hasSpeechSupport
-                      ? isListening
-                        ? "Listening…"
-                        : "Start voice capture"
-                      : "Voice to text unavailable"
-                  }
-                  className={`inline-flex items-center justify-center rounded-full border shadow-sm ${
-                    !hasSpeechSupport
-                      ? "bg-gray-100 text-gray-300 border-gray-200 cursor-not-allowed"
-                      : isListening
-                      ? "bg-red-100 text-red-600 border-red-200 animate-pulse"
-                      : "bg-[#111827] text-white hover:bg-black"
-                  } w-9 h-9`}
-                >
-                  <Mic className={`w-4 h-4`} />
-                </button>
-              )}
-              {channel === "email" && (
-                <button
-                  type="button"
-                  onClick={handleLoadEmailSample}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#612D91] bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 transition-colors"
-                >
-                  <Mail className="w-3.5 h-3.5" />
-                  Load Sample Email
-                </button>
-              )}
-              {channel === "chat" && (
-                <div className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-full border border-emerald-200">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Live Chat
-                </div>
-              )}
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-white bg-gradient-to-r from-[#612D91] to-[#7B3FE4] rounded-full">
+                {channel === "voice" && <><Phone className="w-3.5 h-3.5" /> Voice</>}
+                {channel === "chat" && <><MessageCircle className="w-3.5 h-3.5" /> Chat</>}
+                {channel === "email" && <><Mail className="w-3.5 h-3.5" /> Email</>}
+              </div>
             </div>
-            <div className="mt-1 text-sm text-gray-500">
-              {/* Voice Input */}
-              {channel === "voice" && (
-                <p className="line-clamp-4 bg-white/70 rounded-xl border border-gray-200 px-3 py-2.5">
-                  {interactionText ||
-                    'Say something like "The printer on floor 3 is offline and nothing is printing" or "My home printer keeps saying the ink is not recognised."'}
-                </p>
-              )}
 
-              {/* Email Input */}
+            {/* Display captured text with metadata */}
+            {interactionText ? (
+              <div className="space-y-2">
+                {/* Metadata bar */}
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <User className="w-3 h-3" />
+                      Customer #{Math.floor(Math.random() * 9000) + 1000}
+                    </span>
+                  </div>
+                  <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-semibold">
+                    Captured
+                  </span>
+                </div>
+
+                {/* Main text */}
+                <div className="bg-gradient-to-br from-white to-indigo-50/30 rounded-lg border border-indigo-200 p-3">
+                  <p className="text-base text-gray-900 leading-relaxed">{interactionText}</p>
+                </div>
+
+                {/* Analysis metadata */}
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="flex items-center gap-1.5 text-gray-600">
+                    <span className="font-semibold">Words:</span>
+                    <span>{interactionText.trim().split(/\s+/).length}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-gray-600">
+                    <span className="font-semibold">Lang:</span>
+                    <span>EN</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-gray-600">
+                    <span className="font-semibold">Sentiment:</span>
+                    {/* Production: Use OpenAI GPT-4 with sentiment classification or specialized models like:
+                        - DistilBERT fine-tuned on emotion/sentiment datasets
+                        - Azure Text Analytics Sentiment API
+                        - Google Cloud Natural Language API
+                        Currently showing placeholder based on issue keywords */}
+                    <span className={`font-semibold ${
+                      interactionText.toLowerCase().includes('not working') || 
+                      interactionText.toLowerCase().includes('error') ||
+                      interactionText.toLowerCase().includes('problem') ? 'text-red-600' :
+                      interactionText.toLowerCase().includes('slow') ||
+                      interactionText.toLowerCase().includes('issue') ? 'text-amber-600' :
+                      'text-green-600'
+                    }`}>
+                      {interactionText.toLowerCase().includes('not working') || 
+                       interactionText.toLowerCase().includes('error') ||
+                       interactionText.toLowerCase().includes('problem') ? 'Urgent' :
+                       interactionText.toLowerCase().includes('slow') ||
+                       interactionText.toLowerCase().includes('issue') ? 'Concerned' :
+                       'Neutral'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center py-6">
+                  <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-purple-100 flex items-center justify-center">
+                    <User className="w-6 h-6 text-purple-400" />
+                  </div>
+                  <p className="text-xs text-gray-500 font-medium">
+                    Waiting for input...
+                  </p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">
+                    Use Live Monitor above
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* All input now comes from Live Interaction Monitor - no local UI needed */}
+            <div className="hidden">
+              {/* Keeping structure for state management only */}
               {channel === "email" && (
                 <div className="space-y-2">
                   <div className="bg-white rounded-lg border border-gray-200 p-2">
@@ -991,101 +989,19 @@ export default function AgenticSupportConsole({ onNavigate }) {
                 </div>
               )}
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-gray-700">
-              <span className="font-semibold mr-1">Channel:</span>
-              <label className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border cursor-pointer transition-all ${
-                channel === "voice" 
-                  ? "bg-indigo-50 border-indigo-300 text-indigo-700 font-semibold" 
-                  : "bg-white hover:border-indigo-200"
-              }`}>
-                <input
-                  type="radio"
-                  name="channel"
-                  value="voice"
-                  checked={channel === "voice"}
-                  onChange={() => setChannel("voice")}
-                  className="h-3 w-3 text-indigo-600 border-gray-300 focus:ring-indigo-500"
-                />
-                <Phone className="w-3 h-3" />
-                <span>Voice</span>
-              </label>
-              <label className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border cursor-pointer transition-all ${
-                channel === "chat" 
-                  ? "bg-emerald-50 border-emerald-300 text-emerald-700 font-semibold" 
-                  : "bg-white hover:border-emerald-200"
-              }`}>
-                <input
-                  type="radio"
-                  name="channel"
-                  value="chat"
-                  checked={channel === "chat"}
-                  onChange={() => setChannel("chat")}
-                  className="h-3 w-3 text-emerald-600 border-gray-300 focus:ring-emerald-500"
-                />
-                <MessageCircle className="w-3 h-3" />
-                <span>Chat</span>
-              </label>
-              <label className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border cursor-pointer transition-all ${
-                channel === "email" 
-                  ? "bg-purple-50 border-purple-300 text-purple-700 font-semibold" 
-                  : "bg-white hover:border-purple-200"
-              }`}>
-                <input
-                  type="radio"
-                  name="channel"
-                  value="email"
-                  checked={channel === "email"}
-                  onChange={() => setChannel("email")}
-                  className="h-3 w-3 text-purple-600 border-gray-300 focus:ring-purple-500"
-                />
-                <Mail className="w-3 h-3" />
-                <span>Email</span>
-              </label>
-              <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border bg-gray-50 text-gray-400 cursor-not-allowed">
-                <input
-                  type="radio"
-                  name="channel"
-                  value="telemetry"
-                  checked={channel === "telemetry"}
-                  disabled
-                  className="h-3 w-3 text-gray-300 border-gray-200"
-                />
-                <Cloud className="w-3 h-3" />
-                <span>Telemetry (soon)</span>
-              </label>
-              <span className="ml-auto px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-                Language: EN
-              </span>
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {INTENT_CATALOG.map((intent) => (
-                <button
-                  key={intent.id}
-                  type="button"
-                  onClick={() => handleSampleClick(intent)}
-                  className="flex items-center justify-center px-3 py-2 rounded-lg text-[11px] font-medium border border-gray-200 text-gray-700 bg-white hover:border-[#612D91]/40 hover:text-[#612D91] hover:bg-purple-50 transition-all text-center min-h-[40px]"
-                  title={intent.text}
-                >
-                  <span className="line-clamp-2">{intent.label}</span>
-                </button>
-              ))}
-            </div>
           </motion.div>
 
           {/* Column 2: Intent Brain – subtle teal */}
           <motion.div
             animate={{
-              scale: ["intent-detecting", "intent-ready", "telemetry", "running", "completed", "escalated"].includes(stage)
-                ? 1.03
-                : 1,
               boxShadow: ["intent-detecting", "intent-ready"].includes(stage)
-                ? "0 22px 55px rgba(27,192,186,0.55)"
-                : "0 6px 18px rgba(15,23,42,0.10)",
+                ? "0 12px 30px rgba(27,192,186,0.35)"
+                : "0 2px 8px rgba(15,23,42,0.08)",
             }}
-            transition={{ duration: 0.35 }}
-            className={`relative rounded-lg px-4 py-4 flex flex-col gap-3 transition-all duration-300 border-2 min-h-[420px] ${
+            transition={{ duration: 0.3 }}
+            className={`relative rounded-lg px-4 py-4 flex flex-col gap-3 transition-all duration-300 border-2 h-[300px] overflow-y-auto ${
               ["intent-detecting", "intent-ready"].includes(stage)
-                ? "border-teal-300 bg-teal-50"
+                ? "border-teal-400 bg-teal-50 shadow-lg"
                 : "border-gray-200 bg-white"
             }`}
           >
@@ -1096,23 +1012,37 @@ export default function AgenticSupportConsole({ onNavigate }) {
                   pulse={["intent-detecting"].includes(stage)}
                   icon={<Brain className="w-4 h-4" />}
                 />
-                <p className="text-base font-semibold text-gray-900">Intent Brain</p>
+                <p className="text-lg font-bold text-gray-900">Intent Brain</p>
               </div>
               <p className="text-[11px] text-gray-500">{intentStatus}</p>
             </div>
             {(!interactionText || interactionText.trim().split(/\s+/).length < 3) ? (
-              <div className="mt-2 text-xs text-gray-500">
-                Type or say a short sentence (at least three words) so the Intent Brain can understand what you need.
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center py-6">
+                  <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gradient-to-br from-teal-100 to-cyan-100 flex items-center justify-center border-2 border-teal-200">
+                    <Brain className="w-6 h-6 text-teal-600" />
+                  </div>
+                  <p className="text-xs text-gray-500 font-medium">
+                    Waiting for customer issue
+                  </p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">
+                    Intent Brain will analyze and route to workflow
+                  </p>
+                </div>
               </div>
             ) : selectedWorkflow === "unknown" ? (
-              <div className="mt-2 text-xs text-gray-500 space-y-1.5">
-                <p>
-                  We couldn’t confidently match this request to any existing playbook. Rather than guessing, the
-                  agents will package full context and route it to a human.
-                </p>
-                <p className="text-[11px] text-gray-400">
-                  This is also a signal to create a new workflow template for this pattern.
-                </p>
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center py-6 px-4">
+                  <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center border-2 border-amber-200">
+                    <AlertCircle className="w-6 h-6 text-amber-600" />
+                  </div>
+                  <p className="text-xs text-gray-700 font-medium mb-1">
+                    No matching workflow found
+                  </p>
+                  <p className="text-[10px] text-gray-500">
+                    Escalating to human agent with full context
+                  </p>
+                </div>
               </div>
             ) : (
               <div className="mt-1 space-y-2.5 text-sm">
@@ -1125,7 +1055,7 @@ export default function AgenticSupportConsole({ onNavigate }) {
                     className="bg-gradient-to-r from-[#612D91]/10 to-[#A64AC9]/10 border-2 border-[#612D91]/30 rounded-xl p-3 shadow-sm"
                   >
                     <div className="flex items-start gap-2 mb-2">
-                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#612D91] flex items-center justify-center">
+                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-[#612D91] to-[#A64AC9] flex items-center justify-center shadow-sm border border-[#612D91]/30">
                         <CheckCircle2 className="w-4 h-4 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -1164,7 +1094,9 @@ export default function AgenticSupportConsole({ onNavigate }) {
                   >
                     <div className="flex items-start gap-2 justify-between">
                       <div className="flex items-start gap-2 min-w-0 flex-1">
-                        <BookOpen className="w-3.5 h-3.5 text-[#612D91] flex-shrink-0 mt-0.5" />
+                        <div className="w-5 h-5 rounded-md bg-gradient-to-br from-purple-100 to-indigo-100 flex items-center justify-center border border-purple-200 flex-shrink-0 mt-0.5">
+                          <BookOpen className="w-3 h-3 text-[#612D91]" />
+                        </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 mb-0.5">
                             <span className="text-[10px] font-bold text-gray-900">Knowledge Source</span>
@@ -1206,8 +1138,11 @@ export default function AgenticSupportConsole({ onNavigate }) {
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: (idx + 1) * 0.1 + 0.3 }}
-                        className="flex items-center justify-between rounded-lg px-2.5 py-2 bg-white/70 border border-gray-200 hover:border-gray-300 transition-colors"
+                        className="flex items-center gap-2 rounded-lg px-2.5 py-2 bg-white/70 border border-gray-200 hover:border-gray-300 transition-colors"
                       >
+                        <div className="w-5 h-5 rounded-md bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center border border-gray-300 flex-shrink-0">
+                          <Sparkles className="w-3 h-3 text-gray-600" />
+                        </div>
                         <div className="flex flex-col flex-1 min-w-0">
                           <span className="font-medium text-gray-700 text-xs truncate">
                             {intent.label}
@@ -1245,23 +1180,22 @@ export default function AgenticSupportConsole({ onNavigate }) {
             )}
             <p className="mt-1 text-[11px] text-gray-500">
               {selectedWorkflow === "unknown"
-                ? "Understands there is no safe playbook and makes a clean hand-off to a human agent."
-                : "Understands what the user wants and picks a playbook."}
+                ? "No matching workflow found. Escalating to human agent with full context."
+                : "Intent successfully classified and mapped to resolution workflow."}
             </p>
           </motion.div>
 
           {/* Column 3: Telemetry Snapshot – Enhanced with rich data */}
           <motion.div
             animate={{
-              scale: stage === "telemetry" ? 1.03 : 1,
               boxShadow:
                 stage === "telemetry"
-                  ? "0 22px 55px rgba(254,189,23,0.55)"
-                  : "0 6px 18px rgba(15,23,42,0.08)",
+                  ? "0 12px 30px rgba(254,189,23,0.35)"
+                  : "0 2px 8px rgba(15,23,42,0.08)",
             }}
-            transition={{ duration: 0.35 }}
-            className={`relative rounded-lg px-4 py-4 flex flex-col gap-3 transition-all duration-300 border-2 min-h-[420px] ${
-              stage === "telemetry" ? "border-amber-300 bg-amber-50" : "border-gray-200 bg-white"
+            transition={{ duration: 0.3 }}
+            className={`relative rounded-lg px-4 py-4 flex flex-col gap-3 transition-all duration-300 border-2 h-[300px] overflow-y-auto ${
+              stage === "telemetry" ? "border-amber-400 bg-amber-50 shadow-lg" : "border-gray-200 bg-white"
             }`}
           >
             <div className="flex items-center justify-between">
@@ -1271,7 +1205,7 @@ export default function AgenticSupportConsole({ onNavigate }) {
                   pulse={stage === "telemetry"}
                   icon={<Cpu className="w-4 h-4" />}
                 />
-                <p className="text-base font-semibold text-gray-900">Input Datapoints</p>
+                <p className="text-lg font-bold text-gray-900">Input Datapoints</p>
               </div>
               {stage === "telemetry" && (
                 <motion.div
@@ -1286,7 +1220,7 @@ export default function AgenticSupportConsole({ onNavigate }) {
             </div>
             
             {/* Show waiting state until customer provides input */}
-            {!interactionText || stage === "idle" || stage === "capture" || !detectedDevice ? (
+            {!interactionText || !detectedDevice ? (
               <div className="mt-4 flex flex-col items-center justify-center py-8 text-center">
                 <Cpu className="w-12 h-12 text-gray-300 mb-3" />
                 <p className="text-sm font-medium text-gray-500 mb-1">Waiting for customer input...</p>
@@ -1573,23 +1507,22 @@ export default function AgenticSupportConsole({ onNavigate }) {
                   ✓ Context-aware telemetry based on customer's actual device
                 </p>
               </>
-            )}
-          </motion.div>
-        </div>
-
-
-        {/* Row 2: Outcome as full-width card – professional pinks */}
+          )}
+        </motion.div>
+      </div>
+        {/* End of 3-column grid */}
+        
+        {/* Workflow Outcome - AI Console Output */}
         <motion.div
           animate={{
-            scale: ["running", "completed", "escalated"].includes(stage) ? 1.02 : 1,
             boxShadow: ["completed"].includes(stage)
-              ? "0 24px 60px rgba(249,70,128,0.3)"
+              ? "0 12px 30px rgba(249,70,128,0.2)"
               : stage === "escalated"
-              ? "0 24px 60px rgba(239,68,68,0.3)"
-              : "0 6px 18px rgba(15,23,42,0.08)",
+              ? "0 12px 30px rgba(239,68,68,0.2)"
+              : "0 2px 8px rgba(15,23,42,0.06)",
           }}
           transition={{ duration: 0.3 }}
-          className={`relative rounded-xl overflow-hidden px-3 py-4 flex flex-col gap-2.5 transition-all duration-300 ${
+          className={`relative rounded-xl overflow-hidden px-4 py-4 flex flex-col gap-2.5 transition-all duration-300 border-2 mt-5 ${
             stage === "completed"
               ? "border-pink-400 bg-pink-50"
             : stage === "escalated"
@@ -1597,7 +1530,6 @@ export default function AgenticSupportConsole({ onNavigate }) {
               : "border-gray-200 bg-white"
           }`}
         >
-          {/* Removed heavy gradient overlay to keep it professional */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <AvatarCircle
@@ -1672,7 +1604,6 @@ export default function AgenticSupportConsole({ onNavigate }) {
             )}
           </div>
         </motion.div>
-      </div>
 
       {/* Hidden engine runner to keep workflow status updated without showing the old demo UI.
           For unknown intents we skip this runner, since we escalate immediately instead of invoking a playbook. */}
@@ -1705,6 +1636,30 @@ export default function AgenticSupportConsole({ onNavigate }) {
                 const ticketResult = await createTicket(ticketData, selectedTicketingSystem);
                 setTicketResult(ticketResult);
                 setTicketConfirmed(true);
+                
+                // Save ticket to storage for Watchtower
+                const ticketToSave = {
+                  id: ticketResult.ticketId || `TKT-${Date.now()}`,
+                  ticketId: ticketResult.ticketId,
+                  ticketUrl: ticketResult.url,
+                  ticketSystem: ticketResult.system,
+                  workflow: selectedWorkflow,
+                  category: ticketData.category,
+                  interactionText: interactionText,
+                  detectedDevice: detectedDevice,
+                  status: ticketData.status,
+                  diagnosis: result?.diagnosis,
+                  actions: result?.actions || [],
+                  escalationReason: result?.escalation?.reason,
+                  knowledgeBase: knowledgeBaseRef || (selectedWorkflow === 'printer_offline' 
+                    ? 'Printer_Guide.pdf p.12-15'
+                    : selectedWorkflow === 'ink_error'
+                    ? 'Ink_Error_Resolution.pdf p.8-10'
+                    : null),
+                  createdAt: ticketResult.createdAt || new Date().toISOString(),
+                  timestamp: new Date().toISOString(),
+                };
+                saveTicket(ticketToSave);
                 
                 // Update result with ticket info
                 const updatedResult = {
@@ -1741,6 +1696,8 @@ export default function AgenticSupportConsole({ onNavigate }) {
           />
         </div>
       )}
+      
+      </div>
 
       {/* Ticket confirmation modal */}
       {showTicketModal && lastResult?.escalation && (
@@ -1846,6 +1803,26 @@ export default function AgenticSupportConsole({ onNavigate }) {
                     setTicketResult(result);
                     setTicketConfirmed(true);
                     setShowTicketModal(false);
+                    
+                    // Save ticket to storage for Watchtower
+                    const ticketToSave = {
+                      id: result.ticketId || `TKT-${Date.now()}`,
+                      ticketId: result.ticketId,
+                      ticketUrl: result.url,
+                      ticketSystem: result.system,
+                      workflow: selectedWorkflow,
+                      category: lastResult?.category || "Unknown",
+                      interactionText: interactionText,
+                      detectedDevice: detectedDevice,
+                      status: lastResult?.escalation?.required ? "escalated" : "resolved",
+                      diagnosis: lastResult?.diagnosis,
+                      actions: lastResult?.actions || [],
+                      escalationReason: lastResult?.escalation?.reason,
+                      knowledgeBase: lastResult?.knowledgeBase || null,
+                      createdAt: result.createdAt || new Date().toISOString(),
+                      timestamp: new Date().toISOString(),
+                    };
+                    saveTicket(ticketToSave);
                     
                     // Update lastResult with actual ticket info
                     setLastResult({
@@ -2072,6 +2049,7 @@ export default function AgenticSupportConsole({ onNavigate }) {
           onClose={() => setShowDocViewer(false)}
         />
       )}
+      </div>
     </div>
   );
 }
